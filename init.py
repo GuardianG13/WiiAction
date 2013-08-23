@@ -1,0 +1,187 @@
+import paraview.vtk
+def pvrotate(x,y):
+  renView = GetRenderView()
+  transform = paraview.vtk.vtkTransform()
+  camera = GetActiveCamera()
+  renderer = renView.GetRenderer()
+  scale = paraview.vtk.vtkMath.Norm(camera.GetPosition())
+  if scale <= 0.0:
+    scale = paraview.vtk.vtkMath.Norm(camera.GetFocalPoint())
+    if scale <= 0.0:
+      scale = 1.0
+      
+  FPoint = camera.GetFocalPoint()
+  FPoint0 = FPoint[0]
+  FPoint1 = FPoint[1]
+  FPoint2 = FPoint[2]
+  camera.SetFocalPoint(FPoint0/scale,FPoint1/scale,FPoint2/scale)
+  
+  PPoint = camera.GetPosition()
+  PPoint0 = PPoint[0]
+  PPoint1 = PPoint[1]
+  PPoint2 = PPoint[2]
+  camera.SetPosition(PPoint0/scale,PPoint1/scale,PPoint2/scale)
+  
+  center = renView.CenterOfRotation
+  Center0 = center[0]
+  Center1 = center[1]
+  Center2 = center[2]
+
+  renderer.SetWorldPoint(Center0,Center1,Center2,1.0)
+  renderer.WorldToDisplay()
+    
+  v2 = [0,0,0]
+  transform.Identity()
+  transform.Translate(Center0/scale,Center1/scale,Center2/scale)
+  
+  camera.OrthogonalizeViewUp()
+  viewUp = camera.GetViewUp()
+  viewUp0 = viewUp[0]
+  viewUp1 = viewUp[1]
+  viewUp2 = viewUp[2]
+  size = renderer.GetSize()
+  transform.RotateWXYZ(360.0 * x / size[0], viewUp0, viewUp1, viewUp2)
+  
+  paraview.vtk.vtkMath.Cross(camera.GetDirectionOfProjection(), viewUp, v2)
+  transform.RotateWXYZ(-360.0 * y / size[1], v2[0], v2[1], v2[2])
+  transform.Translate(-Center0/scale,-Center1/scale,-Center2/scale)
+  
+  camera.ApplyTransform(transform)
+  camera.OrthogonalizeViewUp()
+  
+  FPoint = camera.GetFocalPoint()
+  FPoint0 = FPoint[0]
+  FPoint1 = FPoint[1]
+  FPoint2 = FPoint[2]
+  camera.SetFocalPoint(FPoint0*scale,FPoint1*scale,FPoint2*scale)
+  
+  PPoint = camera.GetPosition()
+  PPoint0 = PPoint[0]
+  PPoint1 = PPoint[1]
+  PPoint2 = PPoint[2]
+  camera.SetPosition(PPoint0*scale,PPoint1*scale,PPoint2*scale)
+  
+  renderer.ResetCameraClippingRange()
+  renView.InteractiveRender()
+def pvzoom(a):
+  RenderView1 = GetRenderView();
+  Fp = RenderView1.CameraFocalPoint;
+  Cp = RenderView1.CameraPosition;
+  Cvu = RenderView1.CameraViewUp;
+  Ld = [Fp[0]-Cp[0],Fp[1]-Cp[1],Fp[2]-Cp[2]];
+  RenderView1.CameraPosition[0] = RenderView1.CameraPosition[0]-Ld[0]*a*0.2
+  RenderView1.CameraPosition[1] = RenderView1.CameraPosition[1]-Ld[1]*a*0.2
+  RenderView1.CameraPosition[2] = RenderView1.CameraPosition[2]-Ld[2]*a*0.2
+  GetRenderView().GetRenderer().ResetCameraClippingRange()
+  RenderView1.InteractiveRender()
+def pvdolly(a):
+  camera = GetActiveCamera()
+  renView = GetRenderView()
+  renderer = renView.GetRenderer()
+  FPoint = camera.GetFocalPoint()
+  FPoint0 = FPoint[0]
+  FPoint1 = FPoint[1]
+  FPoint2 = FPoint[2]
+
+  PPoint = camera.GetPosition()
+  PPoint0 = PPoint[0]
+  PPoint1 = PPoint[1]
+  PPoint2 = PPoint[2]
+  
+  Norm = camera.GetDirectionOfProjection()
+  Norm0 = Norm[0]
+  Norm1 = Norm[1]
+  Norm2 = Norm[2]
+  
+  size = renderer.GetSize()
+  rng = GetRenderView().CameraClippingRange
+  ZoomScale = 1.5 * rng[1] / size[1]
+  k = a * ZoomScale
+  
+  temp = k * Norm0
+  PPoint0 += temp
+  FPoint0 += temp
+  
+  temp = k * Norm1
+  PPoint1 += temp
+  FPoint1 += temp
+  
+  temp = k * Norm2
+  PPoint2 += temp
+  FPoint2 += temp
+  
+  camera.SetFocalPoint(FPoint0, FPoint1, FPoint2)
+  camera.SetPosition(PPoint0, PPoint1, PPoint2)
+  renderer.ResetCameraClippingRange()
+  renView.InteractiveRender()
+def pvpan(x,y):
+  renView = GetRenderView()
+  camera = GetActiveCamera()
+  (FPoint0,FPoint1,FPoint2) = camera.GetFocalPoint()
+  (PPoint0,PPoint1,PPoint2) = camera.GetPosition()
+  
+  renderer = renView.GetRenderer()
+  renderer.SetWorldPoint(FPoint0, FPoint1, FPoint2, 1.0)
+  renderer.WorldToDisplay()
+  DPoint = renderer.GetDisplayPoint()
+  focalDepth = DPoint[2]
+  
+  (centerX,centerY) = renView.GetRenderWindow().GetSize()
+  
+  APoint0 = centerX/2.0 + x
+  APoint1 = centerY/2.0 + y
+
+  renderer.SetDisplayPoint(APoint0, APoint1, focalDepth)
+  renderer.DisplayToWorld()
+  (RPoint0,RPoint1,RPoint2,RPoint3) = renderer.GetWorldPoint()
+  
+  if RPoint3 != 0.0:
+      RPoint0 = RPoint0/RPoint3
+      RPoint1 = RPoint1/RPoint3
+      RPoint2 = RPoint2/RPoint3
+
+  camera.SetFocalPoint( (FPoint0-RPoint0)/2.0 + FPoint0,
+                        (FPoint1-RPoint1)/2.0 + FPoint1,
+                        (FPoint2-RPoint2)/2.0 + FPoint2)
+  camera.SetPosition( (FPoint0-RPoint0)/2.0 + PPoint0,
+                      (FPoint1-RPoint1)/2.0 + PPoint1,
+                      (FPoint2-RPoint2)/2.0 + PPoint2)
+
+  renderer.ResetCameraClippingRange()
+  renView.InteractiveRender()
+def pvroll(x):
+  renView = GetRenderView()
+  camera = GetActiveCamera()
+  renderer = renView.GetRenderer()
+  FPoint = camera.GetFocalPoint()
+  FPoint0 = FPoint[0]
+  FPoint1 = FPoint[1]
+  FPoint2 = FPoint[2]
+  
+  PPoint = camera.GetPosition()
+  PPoint0 = PPoint[0]
+  PPoint1 = PPoint[1]
+  PPoint2 = PPoint[2]
+
+  Axis0 = FPoint0 - PPoint0
+  Axis1 = FPoint1 - PPoint1
+  Axis2 = FPoint2 - PPoint2
+
+  center = renView.CenterOfRotation
+  Center0 = center[0]
+  Center1 = center[1]
+  Center2 = center[2]
+  renderer.SetWorldPoint(Center0,Center1,Center2,1.0)
+  renderer.WorldToDisplay()
+  
+  transform = paraview.vtk.vtkTransform()
+  transform.Identity()
+  transform.Translate(Center0,Center1,Center2)
+  transform.RotateWXYZ(x, Axis0, Axis1, Axis2)
+  transform.Translate(-Center0,-Center1,-Center2)
+
+  camera.ApplyTransform(transform)
+  camera.OrthogonalizeViewUp()
+
+  renderer.ResetCameraClippingRange()
+  renView.InteractiveRender()
