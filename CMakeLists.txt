@@ -9,6 +9,8 @@ project (WiiAction)
 add_executable (WiiAction WiiMain.cpp)
 
 INCLUDE_DIRECTORIES (/usr/local/include/wiic
-	/usr/local/Trolltech/Qt-4.8.3/include)
+	/usr/local/Trolltech/Qt-4.8.3/include
+	/usr/include/json)
 
 target_link_libraries (WiiAction -lwiicpp)
+target_link_libraries (WiiAction json)

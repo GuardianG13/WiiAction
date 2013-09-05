@@ -66,12 +66,9 @@ public:
 	void GetData(const int socket);
 	void SendData();
 	
-	//Math functions
-	void Cross(const double x[3], const double y[3], double z[3]);
-	double Norm(const double x[3]);
-	double Normalize(double x[3]);
-	
 	//Manipulation Functions
+	void Cross(const double x[3], const double y[3], double z[3]);
+	
 	void Rotate(double dx, double dy);
 	void Pan(double dx, double dy);
 	void Roll(double dx, double dy);

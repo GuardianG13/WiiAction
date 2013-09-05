@@ -11,9 +11,9 @@
 
 struct CameraState
 {
-	double FocalPoint[3];
-	double ViewUp[3];
-	double Position[3];
+	float FocalPoint[3];
+	float ViewUp[3];
+	float Position[3];
 };
 
 class WiiCamera
@@ -24,10 +24,9 @@ public:
 	
 	void OrthogonalizeViewUp();
 	void ApplyTransform(double matrix[4][4]);
-//	void ComputeViewTransformation();
-//	void ComputeDistance();
-//	void ComputeCameraLightTransform();
-	static double Norm(const double x[3]);
+	void ComputeViewTransform();
+	void ComputeDistance();
+	void ComputeViewPlaneNormal();
 	CameraState GetCamState();
 	void SetCamState(const CameraState cam);
 	void GetFocalPoint(double x[3]);
@@ -41,11 +40,11 @@ public:
 		
 private:
 	CameraState camera;
-	double angle;
+	double viewAngle;
 	double DirectionOfProjection[3];
-	WiiTransform *transform;
-	
-	
+	WiiTransform *viewTransform;
+	WiiTransform *Transform;
+	double Distance;
 	
 };
 

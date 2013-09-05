@@ -10,6 +10,11 @@ WiiMatrix::WiiMatrix()
 	this->Identity(*this->Element);
 }
 
+WiiMatrix::~WiiMatrix()
+{
+	
+}
+
 void WiiMatrix::Identity()
 {
 	this->Identity(*this->Element);

@@ -302,7 +302,7 @@ void WiiAction::HandleEvent(CWiimote &wm)
 		}
     	if(nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z) && !nc.Buttons.isHeld(CNunchukButtons::BUTTON_C))
     	{
-    		if(toggle > 0)
+    		if(toggle > 0);
     			//Dolly(nc);
     		else
     			//Zoom(nc);
@@ -587,6 +587,24 @@ void WiiAction::Cross(const double x[3], const double y[3], double z[3])
 	z[0] = Zx; z[1] = Zy; z[2] = Zz;
 }
 
+double WiiAction::Normalize(double x[3])
+{
+	double den;
+	  if ( ( den = this->Norm( x ) ) != 0.0 )
+		{
+		for (int i=0; i < 3; i++)
+		  {
+		  x[i] /= den;
+		  }
+		}
+	return den;
+}
+
+double WiiAction::Norm(const double x[3])
+{
+	return sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+}
+
 void WiiAction::Rotate(double dx, double dy)
 {	
 	if(camState == NULL)
@@ -605,7 +623,6 @@ void WiiAction::Rotate(double dx, double dy)
 			scale = 1.0;
 		}
 	}
-	
 	
 	camState->GetFocalPoint(temp);
 	camState->SetFocalPoint(temp[0]/scale, temp[1]/scale, temp[2]/scale);
@@ -661,7 +678,7 @@ void WiiAction::GetData(const int socket)
 	int ready = 0;
 	int command = 2;
 	int size;
-	float cam[10];
+	double cam[10];
 	
 	while(ready != 1)
 	{
@@ -690,26 +707,14 @@ void WiiAction::GetData(const int socket)
 	
 	json_object * jobj = json_tokener_parse((char*)metadata);
 	
-	json_get_array_values(jobj, "Center", world.center);
+	json_get_array_values(jobj, "Center", this->Center);
 		
 	json_get_array_values(jobj, "Renderers", cam);
 	
-	world.angle = cam[0];
-	for(int i = 0; i < 9; i++)
-	{
-		if(i < 3)
-		{
-			world.camera.FocalPoint[i] = cam[i+1];
-		}
-		else if((i >= 3)&&(i < 6))
-		{
-			world.camera.ViewUp[i-3] = cam[i+1];
-		}
-		else
-		{
-			world.camera.Position[i-6] = cam[i+1];
-		}
-	}
+	this->cam_angle = cam[0];
+	this->camState->SetFocalPoint(cam[1], cam[2], cam[3]);
+	this->camState->SetViewUp(cam[4], cam[5], cam[6]);
+	this->camState->SetPosition(cam[7], cam[8], cam[9]);
 }
 
 void WiiAction::SendData()
@@ -745,9 +750,80 @@ void WiiAction::json_get_array_values( json_object *jobj, char *key, double a[])
   }
 }
 
+void WiiAction::json_parse(json_object * jobj) {
+  enum json_type type;
+  json_object_object_foreach(jobj, key, val) { /*Passing through every array element*/
+	printf("Key = %s\n",key);    
+    type = json_object_get_type(val);
+    switch (type) {
+      case json_type_boolean: 
+      case json_type_double: 
+      case json_type_int: 
+      case json_type_string: print_json_value(val);
+                           break; 
+      case json_type_object: printf("json_type_object\n");
+                           jobj = json_object_object_get(jobj, key);
+                           json_parse(jobj); 
+                           break;
+      case json_type_array: printf("type: json_type_array, ");
+                          json_parse_array(jobj, key);
+                          break;
+    }
+  }
+}
 
+void WiiAction::json_parse_array( json_object *jobj, char *key) {
+  enum json_type type;
+  json_object *jarray = jobj; /*Simply get the array*/
+  if(key) {
+    jarray = json_object_object_get(jobj, key); /*Getting the array if it is a key value pair*/
+  }
 
+  int arraylen = json_object_array_length(jarray); /*Getting the length of the array*/
+  printf("Array Length: %d\n",arraylen);
+  int i;
+  json_object * jvalue;
 
+  for (i=0; i< arraylen; i++){
+    jvalue = json_object_array_get_idx(jarray, i); /*Getting the array element at position i*/
+    type = json_object_get_type(jvalue);
+    if (type == json_type_array) {
+      char* check = "LookAt";
+      if(key == check)
+      {
+    	  printf("HERE");
+      }
+      json_parse_array(jvalue, NULL);
+    }
+    else if (type != json_type_object) {
+      printf("value[%d]: ",i);
+      print_json_value(jvalue);
+    }
+    else {
+      json_parse(jvalue);
+    }
+  }
+}
+
+void WiiAction::print_json_value(json_object *jobj){
+  enum json_type type;
+  printf("type: ",type);
+  type = json_object_get_type(jobj); /*Getting the type of the json object*/
+  switch (type) {
+    case json_type_boolean: printf("json_type_boolean\n");
+                         printf("value: %s\n", json_object_get_boolean(jobj)? "true": "false");
+                         break;
+    case json_type_double: printf("json_type_double\n");
+                        printf("          value: %lf\n", json_object_get_double(jobj));
+                         break;
+    case json_type_int: printf("json_type_int\n");
+                        printf("          value: %d\n", json_object_get_int(jobj));
+                         break;
+    case json_type_string: printf("json_type_string\n");
+                         printf("          value: %s\n", json_object_get_string(jobj));
+                         break;
+  }
+}
 
 
 

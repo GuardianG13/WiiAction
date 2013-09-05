@@ -1,1 +1,1 @@
-/usr/bin/c++       CMakeFiles/WiiAction.dir/WiiMain.cpp.o  -o WiiAction -rdynamic -lwiicpp 
+/usr/bin/c++       CMakeFiles/WiiAction.dir/WiiMain.cpp.o  -o WiiAction -rdynamic -lwiicpp -ljson 

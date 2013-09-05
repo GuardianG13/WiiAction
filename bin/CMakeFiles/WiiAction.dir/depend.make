@@ -10,6 +10,14 @@ CMakeFiles/WiiAction.dir/WiiMain.cpp.o: ../WiiMatrix.cxx
 CMakeFiles/WiiAction.dir/WiiMain.cpp.o: ../WiiMatrix.h
 CMakeFiles/WiiAction.dir/WiiMain.cpp.o: ../WiiTransform.cxx
 CMakeFiles/WiiAction.dir/WiiMain.cpp.o: ../WiiTransform.h
+CMakeFiles/WiiAction.dir/WiiMain.cpp.o: /usr/include/json/arraylist.h
+CMakeFiles/WiiAction.dir/WiiMain.cpp.o: /usr/include/json/bits.h
+CMakeFiles/WiiAction.dir/WiiMain.cpp.o: /usr/include/json/debug.h
+CMakeFiles/WiiAction.dir/WiiMain.cpp.o: /usr/include/json/json.h
+CMakeFiles/WiiAction.dir/WiiMain.cpp.o: /usr/include/json/json_object.h
+CMakeFiles/WiiAction.dir/WiiMain.cpp.o: /usr/include/json/json_tokener.h
+CMakeFiles/WiiAction.dir/WiiMain.cpp.o: /usr/include/json/json_util.h
+CMakeFiles/WiiAction.dir/WiiMain.cpp.o: /usr/include/json/linkhash.h
 CMakeFiles/WiiAction.dir/WiiMain.cpp.o: /usr/local/include/wiic/accsample.h
 CMakeFiles/WiiAction.dir/WiiMain.cpp.o: /usr/local/include/wiic/dataset.h
 CMakeFiles/WiiAction.dir/WiiMain.cpp.o: /usr/local/include/wiic/sample.h
