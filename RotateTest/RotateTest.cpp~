@@ -432,7 +432,7 @@ void SetViewUp(float x, float y, float z)
 
 
 
-void ApplyTransform()
+void ApplyTransform(float matrix[4][4])
 {
 	float posOld[4], posNew[4], fpOld[4], fpNew[4], vuOld[4], vuNew[4];
 	for(int i = 0; i < 3; i++)
@@ -441,7 +441,6 @@ void ApplyTransform()
 		vuOld[i] = camera.ViewUp[i];
 		posOld[i] = camera.Position[i];
 	}
-	
 	posOld[3] = 1.0;
 	fpOld[3] = 1.0;
 	vuOld[3] = 1.0;
@@ -450,7 +449,6 @@ void ApplyTransform()
 	vuOld[1] += posOld[1];
 	vuOld[2] += posOld[2];
 	
-	transform_Matrix_Update();
 	MultiplyPoint(*transform_Matrix, posOld, posNew);
 	MultiplyPoint(*transform_Matrix, fpOld, fpNew);
 	MultiplyPoint(*transform_Matrix, vuOld, vuNew);
@@ -525,7 +523,7 @@ void printData()
 	cout << endl;
 }
 
-void Clear_Transform()
+void Clear_transform()
 {
 	transform_Concatenation_PreMatrix = false;
 	Identity(*transform_Concatenation_Pre_Matrix);
@@ -535,15 +533,15 @@ void Clear_Transform()
 void Rotate(float dx, float dy)
 {	
 	Identity(*transform_Matrix);
-	cout << "Print Data 1" << endl;
-	printData();
+	//cout << "Print Data 1" << endl;
+	//printData();
 
 	float scale = Norm(camera.Position);
-	cout << "Scale 1: " << scale << endl;
+	//cout << "Scale 1: " << scale << endl;
 	if(scale<=0.0)
 	{
 		scale = Norm(camera.FocalPoint);
-		cout << "Scale 2: " << scale << endl;
+		//cout << "Scale 2: " << scale << endl;
 		if(scale<=0.0)
 		{
 			scale = 1.0;
@@ -551,15 +549,15 @@ void Rotate(float dx, float dy)
 	}
 	
 	float* temp = camera.FocalPoint;
-	cout << "FP temp: " << temp[0] << " , " << temp[1] << " , " << temp[2] << endl;
+	//cout << "FP temp: " << temp[0] << " , " << temp[1] << " , " << temp[2] << endl;
 	SetFocalPoint(temp[0]/scale, temp[1]/scale, temp[2]/scale);
-	cout << "FP: " << camera.FocalPoint[0] << " , " << camera.FocalPoint[1] << " , " << camera.FocalPoint[2] << endl;
+	//cout << "FP: " << camera.FocalPoint[0] << " , " << camera.FocalPoint[1] << " , " << camera.FocalPoint[2] << endl;
 	temp = camera.Position;
-	cout << "Pos temp: " << temp[0] << " , " << temp[1] << " , " << temp[2] << endl;
+	//cout << "Pos temp: " << temp[0] << " , " << temp[1] << " , " << temp[2] << endl;
 	SetPosition(temp[0]/scale, temp[1]/scale, temp[2]/scale);
-	cout << "Pos: " << camera.Position[0] << " , " << camera.Position[1] << " , " << camera.Position[2] << endl;
-	cout << "Print Data 2" << endl;
-	printData();
+	//cout << "Pos: " << camera.Position[0] << " , " << camera.Position[1] << " , " << camera.Position[2] << endl;
+	//cout << "Print Data 2" << endl;
+	//printData();
 	
 	float v2[3];
 	// translate to center
@@ -570,29 +568,27 @@ void Rotate(float dx, float dy)
 	OrthogonalizeViewUp();
 	float *viewUp = camera.ViewUp;
 	RotateWXYZ(360.0*dx, viewUp[0], viewUp[1], viewUp[2]);
-	cout << "Print Data 3" << endl;
-	printData();
+	//cout << "Print Data 3" << endl;
+	//printData();
 	//elevation
 
 	Cross(DirectionOfProjection, viewUp, v2);
 	RotateWXYZ(-360.0*dy, v2[0], v2[1], v2[2]);
-	cout << "Print Data 4" << endl;
-	printData();
+	//cout << "Print Data 4" << endl;
+	//printData();
 	// translate back
 	Translate(-center[0]/scale, -center[1]/scale, -center[2]/scale);
 	ApplyTransform();
 	OrthogonalizeViewUp(); 
-	cout << "Print Data 5" << endl;
-	printData();
-	cout << "Scale 3: " << scale << endl;
-	
-	temp = camera.FocalPoint;
+	//cout << "Print Data 5" << endl;
+	//printData();
+	GetFocalPoint(temp);
 	SetFocalPoint(temp[0]*scale, temp[1]*scale, temp[2]*scale);
-	temp = camera.Position;
+	GetPosition(temp);
 	SetPosition(temp[0]*scale, temp[1]*scale, temp[2]*scale);
-	cout << "Print Data 6" << endl;
-	printData();
-
+	//cout << "Print Data 6" << endl;
+	//printData();
+	
 	SendData();
 	Clear_Transform();
 }
@@ -728,13 +724,10 @@ void updateData()
 	
 	char metadata[length];
 	
-	
 	if(!Receive(s, &metadata, length))
 	{
 		printf("MetaData not received.\n");
 	}
-	
-	cout << metadata << endl;
 	
 	json_object * jobj = json_tokener_parse((char*)metadata);
 	
@@ -758,7 +751,6 @@ void updateData()
 		}
 	}
 	printData();
-
 }
 
 int main(int argc, char** argv)
@@ -805,13 +797,14 @@ int main(int argc, char** argv)
 	//int i = 0;
 	while(1)
 	{	
-		Rotate(0.1, 0.1);
+		Rotate(0.1, 0.6);
 		//if(i == 50)
 		//{
 		printData();
 		//	i = 0;
 		//}
 		//i++;
+		usleep(5000);
 	}
 
 	return 0;
