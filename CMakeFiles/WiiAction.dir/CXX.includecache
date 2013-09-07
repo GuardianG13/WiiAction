@@ -6,9 +6,9 @@
 
 #IncludeRegexTransform: 
 
-/home/tjbxv7/WiiActionClass/WiiAction.cxx
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiAction.cxx
 
-/home/tjbxv7/WiiActionClass/WiiAction.h
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiAction.h
 iostream
 -
 stdio.h
@@ -43,42 +43,42 @@ stdint.h
 -
 json.h
 -
-WiiTransform.h
-/home/tjbxv7/WiiActionClass/WiiTransform.h
 WiiCamera.h
-/home/tjbxv7/WiiActionClass/WiiCamera.h
-WiiMatrix.h
-/home/tjbxv7/WiiActionClass/WiiMatrix.h
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiCamera.h
 WiiAction.cxx
-/home/tjbxv7/WiiActionClass/WiiAction.cxx
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiAction.cxx
 
-/home/tjbxv7/WiiActionClass/WiiCamera.cxx
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiCamera.cxx
 
-/home/tjbxv7/WiiActionClass/WiiCamera.h
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiCamera.h
+WiiMath.h
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiMath.h
 WiiTransform.h
-/home/tjbxv7/WiiActionClass/WiiTransform.h
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiTransform.h
 WiiCamera.cxx
-/home/tjbxv7/WiiActionClass/WiiCamera.cxx
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiCamera.cxx
 
-/home/tjbxv7/WiiActionClass/WiiMain.cpp
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiMain.cpp
 WiiAction.h
-/home/tjbxv7/WiiActionClass/WiiAction.h
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiAction.h
 
-/home/tjbxv7/WiiActionClass/WiiMatrix.cxx
-
-/home/tjbxv7/WiiActionClass/WiiMatrix.h
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiMath.h
 cmath
 -
+
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiMatrix.cxx
+
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiMatrix.h
 WiiMatrix.cxx
-/home/tjbxv7/WiiActionClass/WiiMatrix.cxx
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiMatrix.cxx
 
-/home/tjbxv7/WiiActionClass/WiiTransform.cxx
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiTransform.cxx
 
-/home/tjbxv7/WiiActionClass/WiiTransform.h
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiTransform.h
 WiiMatrix.h
-/home/tjbxv7/WiiActionClass/WiiMatrix.h
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiMatrix.h
 WiiTransform.cxx
-/home/tjbxv7/WiiActionClass/WiiTransform.cxx
+/home/tjbxv7/WiiActionGitHub/WiiAction/WiiTransform.cxx
 
 /usr/include/json/arraylist.h
 

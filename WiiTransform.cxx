@@ -2,12 +2,6 @@
 // Author:		Travis Bueter
 // Description:	Class Definition of Transformation matrix
 
-
-
-#ifndef PI
-#define PI 3.14159265
-#endif
-
 WiiTransform::WiiTransform()
 {
 	this->Matrix = new WiiMatrix;
@@ -21,62 +15,59 @@ WiiTransform::~WiiTransform()
 
 void WiiTransform::Identity()
 {
-	if(PreMatrix != NULL)
-	{
-		this->PreMatrix->Delete();
-		this->PreMatrix = NULL;
-	}
+	this->PreMatrix->Delete();
+	this->PreMatrix = NULL;
 }
 
-void WiiTransform::Translate(double x, double y, double z)
+void WiiTransform::Translate(float x, float y, float z)
 {
 	if (x == 0.0 && y == 0.0 && z == 0.0)
 	{
 		return;
 	}
 
-    double matrix[4][4];
+    float matrix[4][4];
     WiiMatrix::Identity(*matrix);
 
     matrix[0][3] = x;
     matrix[1][3] = y;
     matrix[2][3] = z;
     
-    WiiMatrix::Multiply4x4(*this->Matrix->Element, *matrix, *this->Matrix->Element);
+    this->Concatenate(*matrix);
 }
 
-void WiiTransform::RotateWXYZ(double angle, double x, double y, double z)
+void WiiTransform::RotateWXYZ(float angle, float x, float y, float z)
 {
 	if (angle == 0.0 || (x == 0.0 && y == 0.0 && z == 0.0))
 	{
 	    return;
 	}
 	
-	angle = PI*angle/180;
+	angle = angle*0.017453292f;
 	
-	double w = cos(0.5*angle);
-	double f = sin(0.5*angle)/sqrt(x*x+y*y+z*z);
+	float w = cos(0.5*angle);
+	float f = sin(0.5*angle)/sqrt(x*x+y*y+z*z);
 	x *= f;
 	y *= f;
 	z *= f;
 	
-	double matrix[4][4];
+	float matrix[4][4];
 	WiiMatrix::Identity(*matrix);
 	
-	double ww = w*w;
-	double wx = w*x;
-	double wy = w*y;
-	double wz = w*z;
+	float ww = w*w;
+	float wx = w*x;
+	float wy = w*y;
+	float wz = w*z;
 	
-	double xx = x*x;
-	double yy = y*y;
-	double zz = z*z;
+	float xx = x*x;
+	float yy = y*y;
+	float zz = z*z;
 	
-	double xy = x*y;
-	double xz = x*z;
-	double yz = y*z;
+	float xy = x*y;
+	float xz = x*z;
+	float yz = y*z;
 	
-	double s = ww - xx - yy - zz;
+	float s = ww - xx - yy - zz;
 	
 	matrix[0][0] = xx*2 + s;
 	matrix[1][0] = (xy + wz)*2;
@@ -90,35 +81,35 @@ void WiiTransform::RotateWXYZ(double angle, double x, double y, double z)
 	matrix[1][2] = (yz - wx)*2;
 	matrix[2][2] = zz*2 + s;
 	
-	WiiMatrix::Multiply4x4(*this->Matrix->Element, *matrix, *this->Matrix->Element);
+	this->Concatenate(*matrix);
 }
 
-void WiiTransform::SetupCamera(const double position[3],
-						       const double focalPoint[3],
-						       const double viewUp[3])
+void WiiTransform::SetupCamera(const float position[3],
+						       const float focalPoint[3],
+						       const float viewUp[3])
 {
-  double matrix[4][4];
+  float matrix[4][4];
   WiiMatrix::Identity(*matrix);
 
   // the view directions correspond to the rows of the rotation matrix,
   // so we'll make the connection explicit
-  double *viewSideways =    matrix[0];
-  double *orthoViewUp =     matrix[1];
-  double *viewPlaneNormal = matrix[2];
+  float *viewSideways =    matrix[0];
+  float *orthoViewUp =     matrix[1];
+  float *viewPlaneNormal = matrix[2];
 
   // set the view plane normal from the view vector
   viewPlaneNormal[0] = position[0] - focalPoint[0];
   viewPlaneNormal[1] = position[1] - focalPoint[1];
   viewPlaneNormal[2] = position[2] - focalPoint[2];
-  WiiAction::Normalize(viewPlaneNormal);
+  WiiMath::Normalize(viewPlaneNormal);
 
   // orthogonalize viewUp and compute viewSideways
-  WiiAction::Cross(viewUp,viewPlaneNormal,viewSideways);
-  WiiAction::Normalize(viewSideways);
-  WiiAction::Cross(viewPlaneNormal,viewSideways,orthoViewUp);
+  WiiMath::Cross(viewUp,viewPlaneNormal,viewSideways);
+  WiiMath::Normalize(viewSideways);
+  WiiMath::Cross(viewPlaneNormal,viewSideways,orthoViewUp);
 
   // translate by the vector from the position to the origin
-  double delta[4];
+  float delta[4];
   delta[0] = -position[0];
   delta[1] = -position[1];
   delta[2] = -position[2];
@@ -134,23 +125,21 @@ void WiiTransform::SetupCamera(const double position[3],
   this->Concatenate(*matrix);
 }
 
-void WiiTransform::Concatenate(const double elements[16])
+void WiiTransform::Concatenate(const float elements[16])
 {
 	if(this->PreMatrix == NULL)
 	{
 		this->PreMatrix = new WiiMatrix;
 	}
-	vtkMatrix4x4::Multiply4x4(*this->PreMatrix->Element, elements,
+	WiiMatrix::Multiply4x4(*this->PreMatrix->Element, elements,
 	                          *this->PreMatrix->Element);
 }
 
-void WiiTransform::SetMatrix(const double elements[16])
+void WiiTransform::Update()
 {
-	this->Identity();
-	this->Concatenate(elements);
+	this->Matrix->Identity();
+	WiiMatrix::Multiply4x4(this->Matrix, this->PreMatrix, this->Matrix);
 }
-
-
 
 
 

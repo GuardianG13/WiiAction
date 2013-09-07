@@ -532,34 +532,39 @@ void Clear_Transform()
 	Identity(*transform_Matrix);
 }
 
+float *GetFocalPoint()
+{
+	return camera.FocalPoint;
+}
+
+float *GetPosition()
+{
+	return camera.Position;
+}
+
+float *GetViewUp()
+{
+	return camera.ViewUp;
+}
+
 void Rotate(float dx, float dy)
 {	
 	Identity(*transform_Matrix);
-	cout << "Print Data 1" << endl;
-	printData();
 
 	float scale = Norm(camera.Position);
-	cout << "Scale 1: " << scale << endl;
 	if(scale<=0.0)
 	{
 		scale = Norm(camera.FocalPoint);
-		cout << "Scale 2: " << scale << endl;
 		if(scale<=0.0)
 		{
 			scale = 1.0;
 		}
 	}
 	
-	float* temp = camera.FocalPoint;
-	cout << "FP temp: " << temp[0] << " , " << temp[1] << " , " << temp[2] << endl;
+	float* temp = GetFocalPoint();
 	SetFocalPoint(temp[0]/scale, temp[1]/scale, temp[2]/scale);
-	cout << "FP: " << camera.FocalPoint[0] << " , " << camera.FocalPoint[1] << " , " << camera.FocalPoint[2] << endl;
-	temp = camera.Position;
-	cout << "Pos temp: " << temp[0] << " , " << temp[1] << " , " << temp[2] << endl;
+	temp = GetPosition();
 	SetPosition(temp[0]/scale, temp[1]/scale, temp[2]/scale);
-	cout << "Pos: " << camera.Position[0] << " , " << camera.Position[1] << " , " << camera.Position[2] << endl;
-	cout << "Print Data 2" << endl;
-	printData();
 	
 	float v2[3];
 	// translate to center
@@ -568,30 +573,22 @@ void Rotate(float dx, float dy)
 	
 	//azimuth
 	OrthogonalizeViewUp();
-	float *viewUp = camera.ViewUp;
+	float *viewUp = GetViewUp();
 	RotateWXYZ(360.0*dx, viewUp[0], viewUp[1], viewUp[2]);
-	cout << "Print Data 3" << endl;
-	printData();
+	
 	//elevation
-
 	Cross(DirectionOfProjection, viewUp, v2);
 	RotateWXYZ(-360.0*dy, v2[0], v2[1], v2[2]);
-	cout << "Print Data 4" << endl;
-	printData();
+
 	// translate back
 	Translate(-center[0]/scale, -center[1]/scale, -center[2]/scale);
 	ApplyTransform();
 	OrthogonalizeViewUp(); 
-	cout << "Print Data 5" << endl;
-	printData();
-	cout << "Scale 3: " << scale << endl;
 	
-	temp = camera.FocalPoint;
+	temp = GetFocalPoint();
 	SetFocalPoint(temp[0]*scale, temp[1]*scale, temp[2]*scale);
-	temp = camera.Position;
+	temp = GetPosition();
 	SetPosition(temp[0]*scale, temp[1]*scale, temp[2]*scale);
-	cout << "Print Data 6" << endl;
-	printData();
 
 	SendData();
 	Clear_Transform();
@@ -733,8 +730,6 @@ void updateData()
 	{
 		printf("MetaData not received.\n");
 	}
-	
-	cout << metadata << endl;
 	
 	json_object * jobj = json_tokener_parse((char*)metadata);
 	

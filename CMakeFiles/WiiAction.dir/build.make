@@ -35,10 +35,10 @@ RM = /usr/local/bin/cmake -E remove -f
 CMAKE_EDIT_COMMAND = /usr/local/bin/ccmake
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/tjbxv7/WiiActionClass
+CMAKE_SOURCE_DIR = /home/tjbxv7/WiiActionGitHub/WiiAction
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/tjbxv7/WiiActionClass/bin
+CMAKE_BINARY_DIR = /home/tjbxv7/WiiActionGitHub/WiiAction
 
 # Include any dependencies generated for this target.
 include CMakeFiles/WiiAction.dir/depend.make
@@ -50,18 +50,18 @@ include CMakeFiles/WiiAction.dir/progress.make
 include CMakeFiles/WiiAction.dir/flags.make
 
 CMakeFiles/WiiAction.dir/WiiMain.cpp.o: CMakeFiles/WiiAction.dir/flags.make
-CMakeFiles/WiiAction.dir/WiiMain.cpp.o: ../WiiMain.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/tjbxv7/WiiActionClass/bin/CMakeFiles $(CMAKE_PROGRESS_1)
+CMakeFiles/WiiAction.dir/WiiMain.cpp.o: WiiMain.cpp
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/tjbxv7/WiiActionGitHub/WiiAction/CMakeFiles $(CMAKE_PROGRESS_1)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object CMakeFiles/WiiAction.dir/WiiMain.cpp.o"
-	/usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/WiiAction.dir/WiiMain.cpp.o -c /home/tjbxv7/WiiActionClass/WiiMain.cpp
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/WiiAction.dir/WiiMain.cpp.o -c /home/tjbxv7/WiiActionGitHub/WiiAction/WiiMain.cpp
 
 CMakeFiles/WiiAction.dir/WiiMain.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/WiiAction.dir/WiiMain.cpp.i"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/tjbxv7/WiiActionClass/WiiMain.cpp > CMakeFiles/WiiAction.dir/WiiMain.cpp.i
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/tjbxv7/WiiActionGitHub/WiiAction/WiiMain.cpp > CMakeFiles/WiiAction.dir/WiiMain.cpp.i
 
 CMakeFiles/WiiAction.dir/WiiMain.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/WiiAction.dir/WiiMain.cpp.s"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/tjbxv7/WiiActionClass/WiiMain.cpp -o CMakeFiles/WiiAction.dir/WiiMain.cpp.s
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/tjbxv7/WiiActionGitHub/WiiAction/WiiMain.cpp -o CMakeFiles/WiiAction.dir/WiiMain.cpp.s
 
 CMakeFiles/WiiAction.dir/WiiMain.cpp.o.requires:
 .PHONY : CMakeFiles/WiiAction.dir/WiiMain.cpp.o.requires
@@ -97,6 +97,6 @@ CMakeFiles/WiiAction.dir/clean:
 .PHONY : CMakeFiles/WiiAction.dir/clean
 
 CMakeFiles/WiiAction.dir/depend:
-	cd /home/tjbxv7/WiiActionClass/bin && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/tjbxv7/WiiActionClass /home/tjbxv7/WiiActionClass /home/tjbxv7/WiiActionClass/bin /home/tjbxv7/WiiActionClass/bin /home/tjbxv7/WiiActionClass/bin/CMakeFiles/WiiAction.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/tjbxv7/WiiActionGitHub/WiiAction && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/tjbxv7/WiiActionGitHub/WiiAction /home/tjbxv7/WiiActionGitHub/WiiAction /home/tjbxv7/WiiActionGitHub/WiiAction /home/tjbxv7/WiiActionGitHub/WiiAction /home/tjbxv7/WiiActionGitHub/WiiAction/CMakeFiles/WiiAction.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/WiiAction.dir/depend
 

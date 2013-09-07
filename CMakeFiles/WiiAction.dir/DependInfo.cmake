@@ -4,7 +4,7 @@ SET(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 SET(CMAKE_DEPENDS_CHECK_CXX
-  "/home/tjbxv7/WiiActionClass/WiiMain.cpp" "/home/tjbxv7/WiiActionClass/bin/CMakeFiles/WiiAction.dir/WiiMain.cpp.o"
+  "/home/tjbxv7/WiiActionGitHub/WiiAction/WiiMain.cpp" "/home/tjbxv7/WiiActionGitHub/WiiAction/CMakeFiles/WiiAction.dir/WiiMain.cpp.o"
   )
 SET(CMAKE_CXX_COMPILER_ID "GNU")
 

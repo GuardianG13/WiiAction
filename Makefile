@@ -39,10 +39,10 @@ RM = /usr/local/bin/cmake -E remove -f
 CMAKE_EDIT_COMMAND = /usr/local/bin/ccmake
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/tjbxv7/WiiActionClass
+CMAKE_SOURCE_DIR = /home/tjbxv7/WiiActionGitHub/WiiAction
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/tjbxv7/WiiActionClass/bin
+CMAKE_BINARY_DIR = /home/tjbxv7/WiiActionGitHub/WiiAction
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -69,9 +69,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/tjbxv7/WiiActionClass/bin/CMakeFiles /home/tjbxv7/WiiActionClass/bin/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tjbxv7/WiiActionGitHub/WiiAction/CMakeFiles /home/tjbxv7/WiiActionGitHub/WiiAction/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/tjbxv7/WiiActionClass/bin/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tjbxv7/WiiActionGitHub/WiiAction/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -149,8 +149,7 @@ help:
 	@echo "... WiiMain.s"
 .PHONY : help
 
-CFLAGS += $(shell pkg-config --cflags json)
-LDFLAGS += $(shell pkg-config --libs json)
+
 
 #=============================================================================
 # Special targets to cleanup operation of make.

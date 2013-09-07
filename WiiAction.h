@@ -23,9 +23,7 @@
 #include <stdint.h>
 #include <json.h>
 
-#include "WiiTransform.h"
 #include "WiiCamera.h"
-#include "WiiMatrix.h"
 
 #ifndef PI
 #define PI 3.14159265
@@ -62,24 +60,20 @@ public:
 	void Render();
 	
 	//Socket fuctions
+	bool receiveReadyCommand(int socket);
 	int  Receive(const int socket, void* data, int len);
 	void GetData(const int socket);
 	void SendData();
 	
-	//Math functions
-	void Cross(const double x[3], const double y[3], double z[3]);
-	double Norm(const double x[3]);
-	double Normalize(double x[3]);
-	
 	//Manipulation Functions
-	void Rotate(double dx, double dy);
-	void Pan(double dx, double dy);
-	void Roll(double dx, double dy);
-	void Zoom(double dx, double dy);
-	void Dolly(double dx, double dy);	
+	void Rotate(float dx, float dy);
+	void Pan(float dx, float dy);
+	void Roll(float dx, float dy);
+	void Zoom(float dx, float dy);
+	void Dolly(float dx, float dy);	
 	
 	//JSON Functions
-	void json_get_array_values(json_object *jobj, char *key, double a[]);
+	void json_get_array_values(json_object *jobj, char *key, float a[]);
 	void json_parse(json_object * jobj);
 	void json_parse_array( json_object *jobj, char *key);
 	void print_json_value(json_object *jobj);
@@ -129,8 +123,8 @@ private:
 	
 	///Manipulation Dependents ///
 	WiiCamera *camState;
-	double cam_angle;
-	double Center[3];
+	float cam_angle;
+	float Center[3];
 	
 };
 

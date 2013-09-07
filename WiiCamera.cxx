@@ -20,7 +20,7 @@ WiiCamera::WiiCamera()
 	this->DirectionOfProjection[2] = 0.0;
 	
 	this->viewAngle = 30;
-	viewTransform = new WiiTransform;
+	ViewTransform = new WiiTransform;
 	Transform = new WiiTransform;
 }
 
@@ -30,36 +30,25 @@ WiiCamera::~WiiCamera()
 	Transform->Delete();
 }
 
-void MultiplyPoint(const double t[16], const double in[4], double out[4])
-{
-	double v1 = in[0];
-	double v2 = in[1];
-	double v3 = in[2];
-	double v4 = in[3];
-
-	out[0] = v1*t[0]  + v2*t[1]  + v3*t[2]  + v4*t[3];
-	out[1] = v1*t[4]  + v2*t[5]  + v3*t[6]  + v4*t[7];
-	out[2] = v1*t[8]  + v2*t[9]  + v3*t[10] + v4*t[11];
-	out[3] = v1*t[12] + v2*t[13] + v3*t[14] + v4*t[15];
-}
-
 void WiiCamera::OrthogonalizeViewUp()
 {
-	WiiMatrix *matrix = this->VietTransform->GetMatrix();
+	WiiMatrix *matrix = this->ViewTransform->GetMatrix();
+	
 	this->camera.ViewUp[0] = matrix->GetElement(1,0);
 	this->camera.ViewUp[1] = matrix->GetElement(1,1);
 	this->camera.ViewUp[2] = matrix->GetElement(1,2);
 }
 
-void WiiCamera::ApplyTransform(double matrix[4][4])
+void WiiCamera::ApplyTransform(WiiTransform *t)
 {
-	double posOld[4], posNew[4], fpOld[4], fpNew[4], vuOld[4], vuNew[4];
+	float posOld[4], posNew[4], fpOld[4], fpNew[4], vuOld[4], vuNew[4];
 	for(int i = 0; i < 3; i++)
 	{
 		fpOld[i] = camera.FocalPoint[i];
 		vuOld[i] = camera.ViewUp[i];
 		posOld[i] = camera.Position[i];
 	}
+	
 	posOld[3] = 1.0;
 	fpOld[3] = 1.0;
 	vuOld[3] = 1.0;
@@ -68,9 +57,9 @@ void WiiCamera::ApplyTransform(double matrix[4][4])
 	vuOld[1] += posOld[1];
 	vuOld[2] += posOld[2];
 	
-	MultiplyPoint(*matrix, posOld, posNew);
-	MultiplyPoint(*matrix, fpOld, fpNew);
-	MultiplyPoint(*matrix, vuOld, vuNew);
+	t->MultiplyPoint(posOld, posNew);
+	t->MultiplyPoint(fpOld, fpNew);
+	t->MultiplyPoint(vuOld, vuNew);
 	
 	vuNew[0] -= posNew[0];
 	vuNew[1] -= posNew[1];
@@ -96,7 +85,7 @@ void WiiCamera::SetCamState(const CameraState cam)
 	}
 }
 
-void WiiCamera::GetFocalPoint(double x[3])
+void WiiCamera::GetFocalPoint(float x[3])
 {
 	for(int i = 0; i < 3; i++)
 	{
@@ -104,14 +93,25 @@ void WiiCamera::GetFocalPoint(double x[3])
 	}
 }
 
-void WiiCamera::SetFocalPoint(const double x, const double y, const double z)
+void WiiCamera::SetFocalPoint(float x, float y, float z)
 {
+	if(x == this->camera.FocalPoint[0] && 
+	   y == this->camera.FocalPoint[1] &&
+	   z == this->camera.FocalPoint[2])
+	{
+		return;
+	}
+	
 	this->camera.FocalPoint[0] = x;
 	this->camera.FocalPoint[1] = y;
 	this->camera.FocalPoint[2] = z;
+	
+	this->ComputeViewTransform();
+	this->ComputeDistance();
+	this->ViewTransform->Update();
 }
 
-void WiiCamera::GetViewUp(double x[3])
+void WiiCamera::GetViewUp(float x[3])
 {
 	for(int i = 0; i < 3; i++)
 	{
@@ -119,14 +119,41 @@ void WiiCamera::GetViewUp(double x[3])
 	}
 }
 
-void WiiCamera::SetViewUp(const double x, const double y, const double z)
+void WiiCamera::SetViewUp(float x, float y, float z)
 {
-	this->camera.ViewUp[0] = x;
-	this->camera.ViewUp[1] = y;
-	this->camera.ViewUp[2] = z;
+	// normalize ViewUp, but do _not_ orthogonalize it by default
+	float norm = sqrt(x*x + y*y + z*z);
+	
+	if(norm != 0)
+	{
+		x /= norm;
+		y /= norm;
+		z /= norm;
+	}
+	else
+	{
+		x = 0;
+		y = 1;
+		z = 0;
+	}
+	
+	if (x == camera.ViewUp[0] &&
+		y == camera.ViewUp[1] &&
+		z == camera.ViewUp[2])
+	{
+		return;
+	}
+	
+	camera.ViewUp[0] = x;
+	camera.ViewUp[1] = y;
+	camera.ViewUp[2] = z;
+	
+	ComputeViewTransform();
+	ComputeDistance();
+	this->ViewTransform->Update();
 }
 
-void WiiCamera::GetPosition(double x[3])
+void WiiCamera::GetPosition(float x[3])
 {
 	for(int i = 0; i < 3; i++)
 	{
@@ -134,7 +161,7 @@ void WiiCamera::GetPosition(double x[3])
 	}
 }
 
-void WiiCamera::SetPosition(const double x, const double y, const double z)
+void WiiCamera::SetPosition(float x, float y, float z)
 {
 	if(x == this->camera.Position[0] && 
 	   y == this->camera.Position[1] &&
@@ -149,10 +176,10 @@ void WiiCamera::SetPosition(const double x, const double y, const double z)
 	
 	this->ComputeViewTransform();
 	this->ComputeDistance();
-	//this->ComputeCameraLightTransform();
+	this->ViewTransform->Update();
 }
 
-void WiiCamera::GetDirectionOfProjection(double x[3])
+void WiiCamera::GetDirectionOfProjection(float x[3])
 {
 	for(int i = 0; i < 3; i++)
 	{
@@ -176,16 +203,16 @@ void WiiCamera::ComputeViewPlaneNormal()
 
 void WiiCamera::ComputeDistance()
 {
-	double dx = this->camera.FocalPoint[0] - this->camera.Position[0];
-	double dy = this->camera.FocalPoint[1] - this->camera.Position[1];
-	double dz = this->camera.FocalPoint[2] - this->camera.Position[2];
+	float dx = this->camera.FocalPoint[0] - this->camera.Position[0];
+	float dy = this->camera.FocalPoint[1] - this->camera.Position[1];
+	float dz = this->camera.FocalPoint[2] - this->camera.Position[2];
 	
 	this->Distance = sqrt(dx*dx + dy*dy + dz*dz);
 	
 	if (this->Distance < 1e-20)
 	{
 		this->Distance = 1e-20;		
-		double *vec = this->DirectionOfProjection;
+		float *vec = this->DirectionOfProjection;
 		
 		// recalculate FocalPoint
 		this->camera.FocalPoint[0] = this->camera.Position[0] + vec[0]*this->Distance;

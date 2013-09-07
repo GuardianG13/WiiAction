@@ -47,10 +47,10 @@ RM = /usr/local/bin/cmake -E remove -f
 CMAKE_EDIT_COMMAND = /usr/local/bin/ccmake
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/tjbxv7/WiiActionClass
+CMAKE_SOURCE_DIR = /home/tjbxv7/WiiActionGitHub/WiiAction
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/tjbxv7/WiiActionClass/bin
+CMAKE_BINARY_DIR = /home/tjbxv7/WiiActionGitHub/WiiAction
 
 #=============================================================================
 # Target rules for target CMakeFiles/WiiAction.dir
@@ -59,7 +59,7 @@ CMAKE_BINARY_DIR = /home/tjbxv7/WiiActionClass/bin
 CMakeFiles/WiiAction.dir/all:
 	$(MAKE) -f CMakeFiles/WiiAction.dir/build.make CMakeFiles/WiiAction.dir/depend
 	$(MAKE) -f CMakeFiles/WiiAction.dir/build.make CMakeFiles/WiiAction.dir/build
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/tjbxv7/WiiActionClass/bin/CMakeFiles  1
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/tjbxv7/WiiActionGitHub/WiiAction/CMakeFiles  1
 	@echo "Built target WiiAction"
 .PHONY : CMakeFiles/WiiAction.dir/all
 
@@ -69,9 +69,9 @@ all: CMakeFiles/WiiAction.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/WiiAction.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/tjbxv7/WiiActionClass/bin/CMakeFiles 1
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tjbxv7/WiiActionGitHub/WiiAction/CMakeFiles 1
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/WiiAction.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/tjbxv7/WiiActionClass/bin/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tjbxv7/WiiActionGitHub/WiiAction/CMakeFiles 0
 .PHONY : CMakeFiles/WiiAction.dir/rule
 
 # Convenience name for target.

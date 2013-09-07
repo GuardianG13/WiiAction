@@ -1,1 +1,0 @@
-/home/tjbxv7/WiiActionClass/bin/CMakeFiles/WiiAction.dir

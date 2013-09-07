@@ -36,7 +36,7 @@ void WiiAction::SocketConnect()
 	int ready = 0;
 	int command = 2;
 	int size;
-	double cam[10];
+	float cam[10];
 	
 	svr.sin_family = AF_INET;
 	svr.sin_port = htons(40000);
@@ -59,44 +59,7 @@ void WiiAction::SocketConnect()
 	else
 		printf("Connection successful. \n");
 	
-	//GetData() goes here. Remove following code.
-	
-	
-	while(ready != 1)
-	{
-		if((size = Receive(s, &ready, sizeof(ready))) != 4)
-			printf("Size not 4 bytes. Continue anyways.\n");
-	}
-	
-	if(-1 == send(s, &command, sizeof(command), 0))
-	{
-		printf("Command Send Fail. \n");
-		exit(1);
-	}	
-	
-	unsigned long long length;
-	if(!Receive(s, &length, sizeof(unsigned long long)))
-	{
-		printf("Receive Failure\n");
-	}
-	
-	char metadata[length];
-	
-	if(!Receive(s, &metadata, length))
-	{
-		printf("MetaData not received.\n");
-	}
-	
-	json_object * jobj = json_tokener_parse((char*)metadata);
-	
-	json_get_array_values(jobj, "Center", this->Center);
-		
-	json_get_array_values(jobj, "Renderers", cam);
-	
-	this->cam_angle = cam[0];
-	this->camState->SetFocalPoint(cam[1], cam[2], cam[3]);
-	this->camState->SetViewUp(cam[4], cam[5], cam[6]);
-	this->camState->SetPosition(cam[7], cam[8], cam[9]);
+	GetData(s);
 	
 }
 
@@ -260,13 +223,15 @@ void WiiAction::Rotate(CNunchuk &nc)
 	nc.Joystick.GetPosition(angle, magnitude);
 	if(magnitude >= deadzone)
 	{
-		double x = sin(angle*PI/180);
-		double y = cos(angle*PI/180);
+		float x = sin(angle*PI/180);
+		float y = cos(angle*PI/180);
 		magnitude += .1 - deadzone;
-		double multiplier = r_mod*1.5*mod*exp(magnitude)*pow(magnitude+.5,5);
-		double dx = -r_xinvert*multiplier*x;
-		double dy = -r_yinvert*multiplier*y;
+		float multiplier = r_mod*.15*mod*exp(magnitude)*pow(magnitude+.5,5);
+		float dx = -r_xinvert*multiplier*x;
+		float dy = -r_yinvert*multiplier*y;
+		
 		this->Rotate(dx,dy);
+		cout << "dx: " << dx << " , dy: " << dy << endl;
 	}
 }
 
@@ -529,11 +494,6 @@ void WiiAction::SetInteractionRates()
 	}
 }
 
-void WiiAction::Render()
-{
-	write(s, "Render();", sizeof("Render();")-1);
-}
-
 void WiiAction::HandleStatus(CWiimote &wm)
 {
 	if(wm.GetBatteryLevel()<.2)
@@ -579,73 +539,49 @@ void WiiAction::PrintInstructions(CWiimote &wm)
 	printf("-----------------------------------------------------------------\n\n");
 }
 
-void WiiAction::Cross(const double x[3], const double y[3], double z[3])
-{
-	double Zx = x[1] * y[2] - x[2] * y[1];
-	double Zy = x[2] * y[0] - x[0] * y[2];
-	double Zz = x[0] * y[1] - x[1] * y[0];
-	z[0] = Zx; z[1] = Zy; z[2] = Zz;
-}
-
-double WiiAction::Normalize(double x[3])
-{
-	double den;
-	  if ( ( den = this->Norm( x ) ) != 0.0 )
-		{
-		for (int i=0; i < 3; i++)
-		  {
-		  x[i] /= den;
-		  }
-		}
-	return den;
-}
-
-double WiiAction::Norm(const double x[3])
-{
-	return sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
-}
-
-void WiiAction::Rotate(double dx, double dy)
+void WiiAction::Rotate(float dx, float dy)
 {	
 	if(camState == NULL)
 		return;
 	
 	WiiTransform *transform = new WiiTransform();
-	double temp[3];
-	camState->GetPosition(temp);
-	double scale = WiiCamera::Norm(temp);
+	float scale = WiiMath::Norm(camState->GetPosition());
 	if(scale<=0.0)
 	{
-		camState->GetFocalPoint(temp);
-		scale = WiiCamera::Norm(temp);
+		scale = WiiMath::Norm(camState->GetFocalPoint());
 		if(scale<=0.0)
 		{
 			scale = 1.0;
 		}
 	}
 	
-	camState->GetFocalPoint(temp);
+	float* temp = camState->GetFocalPoint();
 	camState->SetFocalPoint(temp[0]/scale, temp[1]/scale, temp[2]/scale);
-	camState->GetPosition(temp);
+	temp = camState->GetPosition();
 	camState->SetPosition(temp[0]/scale, temp[1]/scale, temp[2]/scale);
 	
-	double v2[3];
+	float v2[3];
+	// translate to center
 	transform->Identity();
 	transform->Translate(this->Center[0]/scale, this->Center[1]/scale, this->Center[2]/scale);
 	
+	//azimuth
 	camState->OrthogonalizeViewUp();
-	double viewUp[3];
-	camState->GetViewUp(viewUp);
+	float *viewUp = camState->GetViewUp();
 	transform->RotateWXYZ(360.0*dx, viewUp[0], viewUp[1], viewUp[2]);
-	double DoP[3];
-	camState->GetDirectionOfProjection(DoP);
-	this->Cross(DoP, viewUp, v2);
+	
+	//elevation
+	WiiMath::Cross(camState->GetDirectionOfProjection(), viewUp, v2);
 	transform->RotateWXYZ(-360.0*dy, v2[0], v2[1], v2[2]);
+	
+	// translate back
 	transform->Translate(-this->Center[0]/scale, -this->Center[1]/scale, -this->Center[2]/scale);
-	camState->ApplyTransform(transform->GetMatrix()->Element);
-	camState->GetFocalPoint(temp);
+	camState->ApplyTransform(transform);
+	camState->OrthogonalizeViewUp();
+	
+	temp = camState->GetFocalPoint();
 	camState->SetFocalPoint(temp[0]*scale, temp[1]*scale, temp[2]*scale);
-	camState->GetPosition(temp);
+	temp = camState->GetPosition();
 	camState->SetPosition(temp[0]*scale, temp[1]*scale, temp[2]*scale);
 	
 	this->SendData();
@@ -673,12 +609,22 @@ int WiiAction::Receive(const int socket, void* data, int len)
 	return total;
 }
 
+bool WiiAction::receiveReadyCommand(int socket)
+{
+	int command = 0;
+	Receive(socket, &command, 4);
+	if(command == 1)
+		return true;
+	else
+		return false;
+}
+
 void WiiAction::GetData(const int socket)
 {
 	int ready = 0;
 	int command = 2;
 	int size;
-	double cam[10];
+	float cam[10];
 	
 	while(ready != 1)
 	{
@@ -719,10 +665,35 @@ void WiiAction::GetData(const int socket)
 
 void WiiAction::SendData()
 {
-	
+	int command = 0;
+	if(command = 4)
+	{
+		if(receiveReadyCommand(s))
+		{
+			cout << "Ready Command Received" << endl;
+			if(-1 == send(s, &command, sizeof(command), 0))
+			{
+				printf("Command Send Fail. \n");
+				exit(1);
+			}
+			if(-1 == send(s, &camState->camera, sizeof(CameraState), 0))
+			{
+				printf("Data Send Fail. \n");
+				exit(1);
+			}
+		}
+		else
+		{
+			cout << "Ready Command not Received" << endl;
+		}
+		command = 0;
+	}
+	else
+		command++;
+		
 }
 
-void WiiAction::json_get_array_values( json_object *jobj, char *key, double a[]) {
+void WiiAction::json_get_array_values( json_object *jobj, char *key, float a[]) {
   enum json_type type;
 
   json_object *jarray = jobj; /*Simply get the array*/
