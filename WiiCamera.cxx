@@ -19,7 +19,16 @@ WiiCamera::WiiCamera()
 	this->DirectionOfProjection[1] = 0.0;
 	this->DirectionOfProjection[2] = 0.0;
 	
+	this->ViewPlaneNormal[1] = 0.0;
+	this->ViewPlaneNormal[2] = 0.0;
+	this->ViewPlaneNormal[3] = 0.0;
+	
+	this->Distance = 0.0;
+	
+	this->ParallelScale = 1.0;
+	
 	this->viewAngle = 30;
+	
 	ViewTransform = new WiiTransform;
 	Transform = new WiiTransform;
 }
@@ -185,6 +194,19 @@ void WiiCamera::GetDirectionOfProjection(float x[3])
 	{
 		x[i] = this->DirectionOfProjection[i];
 	}
+}
+
+void WiiCamera::GetViewPlaneNormal(float x[3])
+{
+	for(int i = 0; i < 3; i++)
+	{
+		x[i] = this->ViewPlaneNormal[i];
+	}
+}
+
+void WiiCamera::SetParallelScale(float scale)
+{
+	this->ParallelScale = scale;
 }
 
 void WiiCamera::ComputeViewTransform()

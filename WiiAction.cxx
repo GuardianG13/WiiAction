@@ -5,9 +5,8 @@
 WiiAction::WiiAction()
 {
 	reloadWiimotes = 0;
-	render = false;
 	trigger = false;
-	mod = 9000*exp(-10);
+	mod = 90*exp(-10);
 	d_invert = 1;
 	z_invert = 1;  
 	p_xinvert = 1;
@@ -23,12 +22,38 @@ WiiAction::WiiAction()
 	s_mod = 1;
 	deadzone = 0.12;
 	
+	this->Center[1] = 0.0;
+	this->Center[2] = 0.0;
+	this->Center[3] = 0.0;
+	
+	this->cam_angle = 0.0;
+	
 	camState = new WiiCamera;
 }
 
 WiiAction::~WiiAction()
 {
 	camState->Delete();
+	close(s);
+}
+
+void* WiiAction::SendData()
+{
+	int command = 4;
+	if(receiveReadyCommand(s))
+	{
+		if(-1 == send(s, &command, sizeof(command), 0))
+		{
+			printf("Command Send Fail. \n");
+			exit(1);
+		}
+		if(-1 == send(s, &camState->camera, sizeof(CameraState), 0))
+		{
+			printf("Data Send Fail. \n");
+			exit(1);
+		}
+	}
+	pthread_exit(NULL);
 }
 
 void WiiAction::SocketConnect()
@@ -101,19 +126,20 @@ void WiiAction::Run()
 {
 	do
 	{
+		//cout << "Top of stack" << endl;
 		if(reloadWiimotes)
 		{
 			wiimotes = wii.GetWiimotes();
 			reloadWiimotes = 0;
 			trigger = false;
 		}
-		while(wii.Poll())
+		if(wii.Poll())
 		{
-			
 			for(i = wiimotes.begin(); i != wiimotes.end(); ++i)
 			{
 				// Use a reference to make working with the iterator handy.
 				CWiimote & wiimote = *i;
+
 				switch(wiimote.GetEvent())
 				{
 		
@@ -168,15 +194,10 @@ void WiiAction::Pan(CNunchuk &nc)
 		float x = sin(angle*PI/180);
 		float y = cos(angle*PI/180);
 		magnitude += .1 - deadzone;
-		float multiplier = p_mod*mod*exp(magnitude)*pow(magnitude+.56,6.5);
-		stringstream ss;
-		ss.str(std::string());
-		ss << "pvpan(" << p_xinvert*multiplier*x << "," << p_yinvert*multiplier*y << ");";
-		const std::string temp = ss.str();
-		const char* cstr = temp.c_str();
-		write(s, cstr, strlen(cstr));
-		if(!render)
-			render = true;
+		float multiplier = 0.5*p_mod*mod*exp(magnitude)*pow(magnitude+.56,6.5);
+		float dx = p_xinvert*multiplier*x;
+		float dy = -p_yinvert*multiplier*y;
+		this->Pan(dx,dy);
 	}
 }
 
@@ -194,8 +215,6 @@ void WiiAction::Dolly(CNunchuk &nc)
 		const std::string temp = ss.str();
 		const char* cstr = temp.c_str();
 		write(s, cstr, strlen(cstr));
-		if(!render)
-			render = true;
 	}
 }
 
@@ -213,8 +232,6 @@ void WiiAction::Zoom(CNunchuk &nc)
 		const std::string temp = ss.str();
 		const char* cstr = temp.c_str();
 		write(s, cstr, strlen(cstr));
-		if(!render)
-			render = true;
 	}
 }
 
@@ -226,12 +243,10 @@ void WiiAction::Rotate(CNunchuk &nc)
 		float x = sin(angle*PI/180);
 		float y = cos(angle*PI/180);
 		magnitude += .1 - deadzone;
-		float multiplier = r_mod*.15*mod*exp(magnitude)*pow(magnitude+.5,5);
+		float multiplier = r_mod*mod*exp(magnitude)*pow(magnitude+.5,5);
 		float dx = -r_xinvert*multiplier*x;
 		float dy = -r_yinvert*multiplier*y;
-		
 		this->Rotate(dx,dy);
-		cout << "dx: " << dx << " , dy: " << dy << endl;
 	}
 }
 
@@ -249,8 +264,6 @@ void WiiAction::Roll(CNunchuk &nc)
 		const std::string temp = ss.str();
 		const char* cstr = temp.c_str();
 		write(s, cstr, strlen(cstr));
-		if(!render)
-			render = true;
 	}
 }
 
@@ -263,7 +276,7 @@ void WiiAction::HandleEvent(CWiimote &wm)
     	CNunchuk &nc = wm.ExpansionDevice.Nunchuk;
     	if(!nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z) && !nc.Buttons.isHeld(CNunchukButtons::BUTTON_C))
 		{
-			//Pan(nc);
+			Pan(nc);
 		}
     	if(nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z) && !nc.Buttons.isHeld(CNunchukButtons::BUTTON_C))
     	{
@@ -283,10 +296,11 @@ void WiiAction::HandleEvent(CWiimote &wm)
     		//Roll(nc);
     		return;
     	}
-    	if(render)
+    	int rc = pthread_create(&thread, NULL, &WiiAction::SendHelper, this);
+    	if (rc)
     	{
-    		//Render();
-    		//render = false;
+    		cout << "Error:unable to create thread," << rc << endl;
+    		exit(-1);
     	}
     }
     if(wm.Buttons.isJustPressed(CButtons::BUTTON_A))
@@ -539,8 +553,44 @@ void WiiAction::PrintInstructions(CWiimote &wm)
 	printf("-----------------------------------------------------------------\n\n");
 }
 
+void WiiAction::Pan(float dx, float dy)
+{
+	if(camState == NULL)
+			return;
+	
+	float pos[3], fp[3]; 
+	camState->GetPosition(pos);
+	camState->GetFocalPoint(fp);
+	
+	camState->OrthogonalizeViewUp();
+	float *up = camState->GetViewUp();
+	float *vpn = camState->GetViewPlaneNormal();
+	float right[3];
+	float scale, tmp;
+	camState->GetViewUp(up);
+	camState->GetViewPlaneNormal(vpn);
+	WiiMath::Cross(vpn, up, right);
+	
+	scale = camState->GetParallelScale();
+	dx *= scale * 2.0;
+	dy *= scale * 2.0;
+	
+	tmp = (right[0]*dx + up[0]*dy);
+	pos[0] += tmp;
+	fp[0] += tmp; 
+	tmp = (right[1]*dx + up[1]*dy); 
+	pos[1] += tmp;
+	fp[1] += tmp; 
+	tmp = (right[2]*dx + up[2]*dy); 
+	pos[2] += tmp;
+	fp[2] += tmp; 
+	camState->SetPosition(pos[0], pos[1], pos[2]);
+	camState->SetFocalPoint(fp[0], fp[1], fp[2]);
+}
+
 void WiiAction::Rotate(float dx, float dy)
 {	
+	
 	if(camState == NULL)
 		return;
 	
@@ -559,32 +609,31 @@ void WiiAction::Rotate(float dx, float dy)
 	camState->SetFocalPoint(temp[0]/scale, temp[1]/scale, temp[2]/scale);
 	temp = camState->GetPosition();
 	camState->SetPosition(temp[0]/scale, temp[1]/scale, temp[2]/scale);
-	
+
 	float v2[3];
 	// translate to center
 	transform->Identity();
 	transform->Translate(this->Center[0]/scale, this->Center[1]/scale, this->Center[2]/scale);
-	
+
 	//azimuth
 	camState->OrthogonalizeViewUp();
 	float *viewUp = camState->GetViewUp();
 	transform->RotateWXYZ(360.0*dx, viewUp[0], viewUp[1], viewUp[2]);
-	
+
 	//elevation
 	WiiMath::Cross(camState->GetDirectionOfProjection(), viewUp, v2);
 	transform->RotateWXYZ(-360.0*dy, v2[0], v2[1], v2[2]);
-	
+
 	// translate back
 	transform->Translate(-this->Center[0]/scale, -this->Center[1]/scale, -this->Center[2]/scale);
 	camState->ApplyTransform(transform);
 	camState->OrthogonalizeViewUp();
-	
+
 	temp = camState->GetFocalPoint();
 	camState->SetFocalPoint(temp[0]*scale, temp[1]*scale, temp[2]*scale);
 	temp = camState->GetPosition();
 	camState->SetPosition(temp[0]*scale, temp[1]*scale, temp[2]*scale);
 	
-	this->SendData();
 	transform->Delete();
 }
 
@@ -663,35 +712,6 @@ void WiiAction::GetData(const int socket)
 	this->camState->SetPosition(cam[7], cam[8], cam[9]);
 }
 
-void WiiAction::SendData()
-{
-	int command = 0;
-	if(command = 4)
-	{
-		if(receiveReadyCommand(s))
-		{
-			cout << "Ready Command Received" << endl;
-			if(-1 == send(s, &command, sizeof(command), 0))
-			{
-				printf("Command Send Fail. \n");
-				exit(1);
-			}
-			if(-1 == send(s, &camState->camera, sizeof(CameraState), 0))
-			{
-				printf("Data Send Fail. \n");
-				exit(1);
-			}
-		}
-		else
-		{
-			cout << "Ready Command not Received" << endl;
-		}
-		command = 0;
-	}
-	else
-		command++;
-		
-}
 
 void WiiAction::json_get_array_values( json_object *jobj, char *key, float a[]) {
   enum json_type type;

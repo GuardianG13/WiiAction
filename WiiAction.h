@@ -17,6 +17,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <cstdlib>
+#include <pthread.h>
 #include <string>
 #include <sstream>
 #include <cmath>
@@ -61,25 +62,23 @@ public:
 	
 	//Socket fuctions
 	bool receiveReadyCommand(int socket);
-	int  Receive(const int socket, void* data, int len);
+    int  Receive(const int socket, void* data, int len);
 	void GetData(const int socket);
-	void SendData();
+	void* SendData();
+	static void *SendHelper(void *arg) { return ((WiiAction *)arg)->SendData(); }
 	
 	//Manipulation Functions
 	void Rotate(float dx, float dy);
 	void Pan(float dx, float dy);
 	void Roll(float dx, float dy);
 	void Zoom(float dx, float dy);
-	void Dolly(float dx, float dy);	
+	void Dolly(float dx, float dy);		
 	
 	//JSON Functions
 	void json_get_array_values(json_object *jobj, char *key, float a[]);
 	void json_parse(json_object * jobj);
 	void json_parse_array( json_object *jobj, char *key);
 	void print_json_value(json_object *jobj);
-	
-	
-	
 	
 private:
 	/// Wii Dependents ///
@@ -94,6 +93,7 @@ private:
 	/// Socket Dependents ///
 	int s;
 	sockaddr_in svr;
+	pthread_t thread;
 	
 	/// Interaction Dependents ///
 	bool trigger;		//Janky way of preventing the instructions from printing twice upon activation.

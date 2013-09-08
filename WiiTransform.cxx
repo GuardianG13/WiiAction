@@ -138,7 +138,11 @@ void WiiTransform::Concatenate(const float elements[16])
 void WiiTransform::Update()
 {
 	this->Matrix->Identity();
-	WiiMatrix::Multiply4x4(this->Matrix, this->PreMatrix, this->Matrix);
+	if(PreMatrix != NULL)
+	{
+		WiiMatrix::Multiply4x4(this->Matrix, this->PreMatrix, this->Matrix);
+	}
+	
 }
 
 

@@ -33,6 +33,8 @@ arpa/inet.h
 -
 cstdlib
 -
+pthread.h
+-
 string
 -
 sstream

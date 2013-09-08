@@ -41,6 +41,10 @@ public:
 	void SetPosition(const float x, const float y, const float z);
 	void GetDirectionOfProjection(float x[3]);
 	float *GetDirectionOfProjection() { return DirectionOfProjection; };
+	void GetViewPlaneNormal(float x[3]);
+	float *GetViewPlaneNormal() { return ViewPlaneNormal; };
+	float GetParallelScale() { return ParallelScale; };
+	void SetParallelScale(float scale);
 	void Delete(){ delete this; }
 	
 	CameraState camera;
@@ -52,6 +56,7 @@ private:
 	WiiTransform *ViewTransform;
 	WiiTransform *Transform;
 	float Distance;
+	float ParallelScale;
 	
 };
 
