@@ -58,7 +58,7 @@ public:
 	void HandleDisconnect(CWiimote& wm);
 	void HandleReadData(CWiimote& wm);
 	void HandleNunchukInserted(CWiimote& wm);
-	void Render();
+	void Create_pThread();
 	
 	//Socket fuctions
 	bool receiveReadyCommand(int socket);
@@ -71,8 +71,8 @@ public:
 	void Rotate(float dx, float dy);
 	void Pan(float dx, float dy);
 	void Roll(float dx, float dy);
-	void Zoom(float dx, float dy);
-	void Dolly(float dx, float dy);		
+	void Zoom(float dy);
+	void Dolly(float dy);		
 	
 	//JSON Functions
 	void json_get_array_values(json_object *jobj, char *key, float a[]);
@@ -125,6 +125,7 @@ private:
 	WiiCamera *camState;
 	float cam_angle;
 	float Center[3];
+	bool haltSendData;
 	
 };
 

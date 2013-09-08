@@ -14,13 +14,15 @@ WiiAction::WiiAction()
 	r_xinvert = 1;
 	r_yinvert = 1;
 	s_invert = 1;
-	toggle = 1;
+	toggle = 0;
 	d_mod = 1;
 	z_mod = 1;
 	p_mod = 1;
 	r_mod = 1;
 	s_mod = 1;
 	deadzone = 0.12;
+	
+	haltSendData = false;
 	
 	this->Center[1] = 0.0;
 	this->Center[2] = 0.0;
@@ -40,7 +42,7 @@ WiiAction::~WiiAction()
 void* WiiAction::SendData()
 {
 	int command = 4;
-	if(receiveReadyCommand(s))
+	if(receiveReadyCommand(s) && !haltSendData)
 	{
 		if(-1 == send(s, &command, sizeof(command), 0))
 		{
@@ -126,7 +128,6 @@ void WiiAction::Run()
 {
 	do
 	{
-		//cout << "Top of stack" << endl;
 		if(reloadWiimotes)
 		{
 			wiimotes = wii.GetWiimotes();
@@ -194,7 +195,7 @@ void WiiAction::Pan(CNunchuk &nc)
 		float x = sin(angle*PI/180);
 		float y = cos(angle*PI/180);
 		magnitude += .1 - deadzone;
-		float multiplier = 0.5*p_mod*mod*exp(magnitude)*pow(magnitude+.56,6.5);
+		float multiplier = p_mod*mod*exp(magnitude)*pow(magnitude+.56,6.5);
 		float dx = p_xinvert*multiplier*x;
 		float dy = -p_yinvert*multiplier*y;
 		this->Pan(dx,dy);
@@ -209,12 +210,9 @@ void WiiAction::Dolly(CNunchuk &nc)
 		float y = cos(angle*PI/180);
 		magnitude += .1 - deadzone;
 		float multiplier = .1*mod*exp(magnitude)*pow(magnitude+.5,5);
-		stringstream ss;
-		ss.str(std::string());
-		ss << "pvdolly(" << d_mod*d_invert*80*multiplier*y << ");";
-		const std::string temp = ss.str();
-		const char* cstr = temp.c_str();
-		write(s, cstr, strlen(cstr));
+		float dy = d_mod*d_invert*80*multiplier*y;
+		this->Dolly(dy);
+
 	}
 }
 
@@ -226,12 +224,8 @@ void WiiAction::Zoom(CNunchuk &nc)
 		float y = cos(angle*PI/180);
 		magnitude += .1 - deadzone;
 		float multiplier = .1*mod*exp(magnitude)*pow(magnitude+.5,5);
-		stringstream ss;
-		ss.str(std::string());
-		ss << "pvzoom(" << z_mod*z_invert*.1*multiplier*y << ");";
-		const std::string temp = ss.str();
-		const char* cstr = temp.c_str();
-		write(s, cstr, strlen(cstr));
+		float dy = z_mod*z_invert*multiplier*y;
+		this->Zoom(dy);
 	}
 }
 
@@ -267,6 +261,16 @@ void WiiAction::Roll(CNunchuk &nc)
 	}
 }
 
+void WiiAction::Create_pThread()
+{
+	int rc = pthread_create(&thread, NULL, &WiiAction::SendHelper, this);
+	if (rc)
+	{
+		cout << "Error:unable to create thread," << rc << endl;
+		exit(-1);
+	}
+}
+
 void WiiAction::HandleEvent(CWiimote &wm)
 {
     int exType = wm.ExpansionDevice.GetType();
@@ -280,10 +284,10 @@ void WiiAction::HandleEvent(CWiimote &wm)
 		}
     	if(nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z) && !nc.Buttons.isHeld(CNunchukButtons::BUTTON_C))
     	{
-    		if(toggle > 0);
-    			//Dolly(nc);
+    		if(toggle)
+    			Dolly(nc);
     		else
-    			//Zoom(nc);
+    			Zoom(nc);
     		return;
     	}
     	if(nc.Buttons.isHeld(CNunchukButtons::BUTTON_C) && !nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z))
@@ -296,17 +300,26 @@ void WiiAction::HandleEvent(CWiimote &wm)
     		//Roll(nc);
     		return;
     	}
-    	int rc = pthread_create(&thread, NULL, &WiiAction::SendHelper, this);
-    	if (rc)
-    	{
-    		cout << "Error:unable to create thread," << rc << endl;
-    		exit(-1);
-    	}
     }
     if(wm.Buttons.isJustPressed(CButtons::BUTTON_A))
     {
     	PrintInstructions(wm);
     }
+    if(wm.Buttons.isJustPressed(CButtons::BUTTON_B))
+	{
+    	//Purpose of doing this is to allow the user a way to change the render camera
+    	//without having to fight the wiimote. When reactivated, wiimote pulls new 
+    	//camera data.
+		if(!haltSendData)
+		{
+			//haltSendData = true; //Dont halt yet. Issue with receiving new data from socket.
+		}
+		else
+		{
+			GetData(s);
+			haltSendData = false;
+		}
+	}
     if(wm.Buttons.isJustPressed(CButtons::BUTTON_DOWN)) // INVERT
 	{
     	SetInvertion();
@@ -553,10 +566,60 @@ void WiiAction::PrintInstructions(CWiimote &wm)
 	printf("-----------------------------------------------------------------\n\n");
 }
 
+void WiiAction::Dolly(float dy)
+{
+	if(camState == NULL)
+		return;
+	
+	float pos[3], fp[3], vu[3], Ld[3];
+	camState->GetPosition(pos);
+	camState->GetFocalPoint(fp);
+	camState->GetViewUp(vu);
+	
+	Ld[0] = fp[0]-pos[0];
+	Ld[1] = fp[1]-pos[1];
+	Ld[2] = fp[2]-pos[2];
+	
+	pos[0] = pos[0]-Ld[0]*dy*0.2;
+	pos[1] = pos[1]-Ld[1]*dy*0.2;
+	pos[2] = pos[2]-Ld[2]*dy*0.2;
+	
+	Create_pThread();
+}
+
+void WiiAction::Zoom(float dy)
+{
+	if(camState == NULL)
+		return;
+	
+	float pos[3], fp[3], *norm, k, tmp;
+	camState->GetPosition(pos);
+	camState->GetFocalPoint(fp);
+	norm = camState->GetDirectionOfProjection();
+	k = dy * 1000;
+	
+	tmp = k * norm[0];
+	pos[0] += tmp;
+	fp[0] += tmp;
+  
+	tmp = k*norm[1];
+	pos[1] += tmp;
+	fp[1] += tmp;
+  
+	tmp = k * norm[2];
+	pos[2] += tmp;
+	fp[2] += tmp;
+	
+	camState->SetFocalPoint(fp[0], fp[1], fp[2]);
+	camState->SetPosition(pos[0], pos[1], pos[2]);
+	
+	Create_pThread();
+}
+
 void WiiAction::Pan(float dx, float dy)
 {
 	if(camState == NULL)
-			return;
+		return;
 	
 	float pos[3], fp[3]; 
 	camState->GetPosition(pos);
@@ -586,6 +649,8 @@ void WiiAction::Pan(float dx, float dy)
 	fp[2] += tmp; 
 	camState->SetPosition(pos[0], pos[1], pos[2]);
 	camState->SetFocalPoint(fp[0], fp[1], fp[2]);
+	
+	Create_pThread();
 }
 
 void WiiAction::Rotate(float dx, float dy)
@@ -633,6 +698,8 @@ void WiiAction::Rotate(float dx, float dy)
 	camState->SetFocalPoint(temp[0]*scale, temp[1]*scale, temp[2]*scale);
 	temp = camState->GetPosition();
 	camState->SetPosition(temp[0]*scale, temp[1]*scale, temp[2]*scale);
+	
+	Create_pThread();
 	
 	transform->Delete();
 }
@@ -685,7 +752,7 @@ void WiiAction::GetData(const int socket)
 	{
 		printf("Command Send Fail. \n");
 		exit(1);
-	}	
+	}
 	
 	unsigned long long length;
 	if(!Receive(s, &length, sizeof(unsigned long long)))
