@@ -547,19 +547,19 @@ void WiiAction::InteractionRatesMenu()
 			cout << ">Pan rate value:    " << interactionMods[0]; 
 			
 			if(interactionMods[0] == 10) cout << " MAX" << endl;
-			else if(interactionMods[0] == 0.1) cout << " MIN" << endl;
+			else if(interactionMods[0] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << " Rotate rate value: " << interactionMods[1];
 			
 			if(interactionMods[1] == 10) cout << " MAX" << endl;
-			else if(interactionMods[1] == 0.1) cout << " MIN" << endl;
+			else if(interactionMods[1] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << " Zoom rate value:   " << interactionMods[2];
 			
 			if(interactionMods[2] == 10) cout << " MAX" << endl;
-			else if(interactionMods[2] == 0.1) cout << " MIN" << endl;
+			else if(interactionMods[2] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << " Aviation Mode:     "; 
@@ -574,19 +574,19 @@ void WiiAction::InteractionRatesMenu()
 			cout << " Pan rate value:    " << interactionMods[0]; 
 			
 			if(interactionMods[0] == 10) cout << " MAX" << endl;
-			else if(interactionMods[0] == 0.1) cout << " MIN" << endl;
+			else if(interactionMods[0] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << ">Rotate rate value: " << interactionMods[1];
 			
 			if(interactionMods[1] == 10) cout << " MAX" << endl;
-			else if(interactionMods[1] == 0.1) cout << " MIN" << endl;
+			else if(interactionMods[1] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << " Zoom rate value:   " << interactionMods[2];
 			
 			if(interactionMods[2] == 10) cout << " MAX" << endl;
-			else if(interactionMods[2] == 0.1) cout << " MIN" << endl;
+			else if(interactionMods[2] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << " Aviation Mode:     "; 
@@ -600,19 +600,19 @@ void WiiAction::InteractionRatesMenu()
 			cout << " Pan rate value:    " << interactionMods[0]; 
 			
 			if(interactionMods[0] == 10) cout << " MAX" << endl;
-			else if(interactionMods[0] == 0.1) cout << " MIN" << endl;
+			else if(interactionMods[0] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << " Rotate rate value: " << interactionMods[1];
 			
 			if(interactionMods[1] == 10) cout << " MAX" << endl;
-			else if(interactionMods[1] == 0.1) cout << " MIN" << endl;
+			else if(interactionMods[1] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << ">Zoom rate value:   " << interactionMods[2];
 			
 			if(interactionMods[2] == 10) cout << " MAX" << endl;
-			else if(interactionMods[2] == 0.1) cout << " MIN" << endl;
+			else if(interactionMods[2] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << " Aviation Mode:     "; 
@@ -626,19 +626,19 @@ void WiiAction::InteractionRatesMenu()
 			cout << " Pan rate value:    " << interactionMods[0]; 
 			
 			if(interactionMods[0] == 10) cout << " MAX" << endl;
-			else if(interactionMods[0] == 0.1) cout << " MIN" << endl;
+			else if(interactionMods[0] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << " Rotate rate value: " << interactionMods[1];
 			
 			if(interactionMods[1] == 10) cout << " MAX" << endl;
-			else if(interactionMods[1] == 0.1) cout << " MIN" << endl;
+			else if(interactionMods[1] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << " Zoom rate value:   " << interactionMods[2];
 			
 			if(interactionMods[2] == 10) cout << " MAX" << endl;
-			else if(interactionMods[2] == 0.1) cout << " MIN" << endl;
+			else if(interactionMods[2] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << ">Aviation Mode:     "; 
