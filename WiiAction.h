@@ -32,6 +32,9 @@
 
 using namespace std;
 
+enum interaction_t { PAN = 0, ROTATE, ZOOM, AVIMODE, NONE };
+
+
 int LED_MAP[4] = {CWiimote::LED_1, CWiimote::LED_2, CWiimote::LED_3, CWiimote::LED_4};
 
 class WiiAction
@@ -48,7 +51,7 @@ public:
 	void SetInvertion();
 	void SetDeadzone();
 	void ToggleZoomingMode();
-	void SetInteractionRates();
+	void InteractionRatesMenu();
 	void Pan(CNunchuk& nc);
 	void Dolly(CNunchuk& nc);
 	void Zoom(CNunchuk& nc);
@@ -113,10 +116,11 @@ private:
 	
 					// For all Modifiers: Values must be positive. 
 					// Value > 1: Magnifies rate; 1 > Value > 0: Miniturizes Rate.
+	interaction_t selectedMod;
+	float interactionMods[3]; //Contains modifiers for  Pan, Rotate, and Zoom, respectively.
+							   //Dolly and Spin not included yet.
 	float d_mod;		//Modifier that changes the rate of the Dolly function.
 	float z_mod;		//Modifier that changes the rate of the Zoom function.
-	float p_mod;		//Modifier that changes the rate of the Pan function.
-	float r_mod;		//Modifier that changes the rate of the Rotate function.
 	float s_mod;		//Modifier that changes the rate of the Spin function.
 	
 	float deadzone;		//Modifies the dead zone of the joystick. Value must be between 0.05 & 1.1.

@@ -16,10 +16,11 @@ WiiAction::WiiAction()
 	s_invert = 1;
 	toggle = 0;
 	d_mod = 1;
-	z_mod = 1;
-	p_mod = 1;
-	r_mod = 1;
 	s_mod = 1;
+	interactionMods[0] = 1;
+	interactionMods[1] = 1;
+	interactionMods[2] = 1;
+	selectedMod = NONE;
 	deadzone = 0.12;
 	
 	haltSendData = false;
@@ -195,7 +196,7 @@ void WiiAction::Pan(CNunchuk &nc)
 		float x = sin(angle*PI/180);
 		float y = cos(angle*PI/180);
 		magnitude += .1 - deadzone;
-		float multiplier = p_mod*mod*exp(magnitude)*pow(magnitude+.56,6.5);
+		float multiplier = interactionMods[0]*mod*exp(magnitude)*pow(magnitude+.56,6.5);
 		float dx = p_xinvert*multiplier*x;
 		float dy = -p_yinvert*multiplier*y;
 		this->Pan(dx,dy);
@@ -224,7 +225,7 @@ void WiiAction::Zoom(CNunchuk &nc)
 		float y = cos(angle*PI/180);
 		magnitude += .1 - deadzone;
 		float multiplier = .1*mod*exp(magnitude)*pow(magnitude+.5,5);
-		float dy = z_mod*z_invert*multiplier*y;
+		float dy = interactionMods[2]*z_invert*multiplier*y;
 		this->Zoom(dy);
 	}
 }
@@ -237,7 +238,7 @@ void WiiAction::Rotate(CNunchuk &nc)
 		float x = sin(angle*PI/180);
 		float y = cos(angle*PI/180);
 		magnitude += .1 - deadzone;
-		float multiplier = r_mod*mod*exp(magnitude)*pow(magnitude+.5,5);
+		float multiplier = interactionMods[1]*mod*exp(magnitude)*pow(magnitude+.5,5);
 		float dx = -r_xinvert*multiplier*x;
 		float dy = -r_yinvert*multiplier*y;
 		this->Rotate(dx,dy);
@@ -266,7 +267,7 @@ void WiiAction::Create_pThread()
 	int rc = pthread_create(&thread, NULL, &WiiAction::SendHelper, this);
 	if (rc)
 	{
-		cout << "Error:unable to create thread," << rc << endl;
+		cout << "Error: unable to create thread," << rc << endl;
 		exit(-1);
 	}
 }
@@ -320,21 +321,98 @@ void WiiAction::HandleEvent(CWiimote &wm)
 			haltSendData = false;
 		}
 	}
-    if(wm.Buttons.isJustPressed(CButtons::BUTTON_DOWN)) // INVERT
+    if(wm.Buttons.isJustPressed(CButtons::BUTTON_DOWN)) 
 	{
-    	SetInvertion();
+		switch(selectedMod)
+		{
+		case PAN:
+			selectedMod = ROTATE;
+			break;
+		case ROTATE:
+			selectedMod = ZOOM;
+			break;
+		case ZOOM:
+			selectedMod = AVIMODE;
+			break;
+		case AVIMODE:
+			selectedMod = NONE;
+			break;
+		case NONE:
+			selectedMod = PAN;
+			break;
+		default:
+			cout << "ERROR: Default case hit, Down" << endl;
+			exit(1);
+			break;
+		}
+		InteractionRatesMenu(); // SetInvertion(); Needs alternate button suggest (+)/(-)
 	}
-    if(wm.Buttons.isJustPressed(CButtons::BUTTON_LEFT)) // Adjust Render Rate
+    if(wm.Buttons.isJustPressed(CButtons::BUTTON_RIGHT) && (selectedMod != NONE))
     {
-    	SetDeadzone();
+    	unsigned int x = selectedMod;
+    	if(x == 3)
+    	{
+    		r_yinvert *= -1;
+    		p_yinvert *= -1;
+    	}
+    	else if(interactionMods[x] < 1)
+    	{
+    		interactionMods[x] += 0.1;
+    	}
+    	else if(interactionMods[x] < 10)
+    	{
+    		interactionMods[x] += 1.0;
+    	}
+    	InteractionRatesMenu();
     }
-	if(wm.Buttons.isJustPressed(CButtons::BUTTON_RIGHT)) // Toggle Dolly/Zoom
+	if(wm.Buttons.isJustPressed(CButtons::BUTTON_LEFT) && (selectedMod != NONE)) 
 	{
-		ToggleZoomingMode();
+    	unsigned int x = selectedMod;
+    	if(x == 3)
+    	{
+    		r_yinvert *= -1;
+    		p_yinvert *= -1;
+    	}
+    	else if(interactionMods[x] < 0.2) //Weird bug causes interactionMods[x] = 0.2 -= 0.1 => 0.099999... 
+    								 //this is a dirty fix
+    	{
+    		interactionMods[x] = 0.1;
+    	}
+    	else if(interactionMods[x] <= 1)
+    	{
+    		interactionMods[x] -= 0.1;
+    	}
+    	else
+    	{
+    		interactionMods[x] -= 1.0;
+    	}
+    	InteractionRatesMenu();
 	}
 	if(wm.Buttons.isJustPressed(CButtons::BUTTON_UP))
 	{
-		SetInteractionRates();
+		switch(selectedMod)
+		{
+		case PAN:
+			selectedMod = NONE;
+			break;
+		case ROTATE:
+			selectedMod = PAN;
+			break;
+		case ZOOM:
+			selectedMod = ROTATE;
+			break;
+		case AVIMODE:
+			selectedMod = ZOOM;
+			break;
+		case NONE:
+			selectedMod = AVIMODE;
+			break;
+		default:
+			cout << "ERROR: Default case hit, Up" << endl;
+			exit(1);
+			break;
+		}
+		InteractionRatesMenu();
 	}
 }
 
@@ -460,64 +538,122 @@ void WiiAction::ToggleZoomingMode()
 	}
 }
 
-void WiiAction::SetInteractionRates()
+void WiiAction::InteractionRatesMenu()
 {
-	char function;
-	float value;
-	printf("\n[Pan = p : Dolly = d : Zoom = z : Rotate = r : Spin = s] Enter 'c' to cancel.\n");
-	cout << "Which function's rate to modify? ";
-	cin >> function;
-	if(function == 'c')
+	switch(selectedMod)
 	{
-		printf("\nCancelled.\n");
-		return;
-	}
-	printf("\nValue must be positive. Value > 1 will magnify rate; Value < 1 will miniaturize rate. \nEntering \'1\' set rate to original value. Enter \'0\' to cancel.\n");
-	cout << "Input modifying value: ";
-	cin >> value;
-	if(value < 0)
-	{
-		function = ';';
-	}
-	else if(value == 0)
-	{
-		function = 'c';
-	}
-	switch(function)
-	{
-		case 'P':
-		case 'p':
-			p_mod = value;
-			printf("\nPan rate modified.\n");
+		case PAN:
+			std::system ( "clear" );
+			cout << ">Pan rate value:    " << interactionMods[0]; 
+			
+			if(interactionMods[0] == 10) cout << " MAX" << endl;
+			else if(interactionMods[0] == 0.1) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Rotate rate value: " << interactionMods[1];
+			
+			if(interactionMods[1] == 10) cout << " MAX" << endl;
+			else if(interactionMods[1] == 0.1) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Zoom rate value:   " << interactionMods[2];
+			
+			if(interactionMods[2] == 10) cout << " MAX" << endl;
+			else if(interactionMods[2] == 0.1) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Aviation Mode:     "; 
+			
+			if(r_yinvert == -1 && p_yinvert == -1) cout << "TRUE" << endl; else cout << "FALSE" << endl;
+				
+			cout << " Close" << endl;
 			break;
-		case 'D':
-		case 'd':
-			d_mod = value;
-			printf("\nDolly rate modified.\n");
+		case ROTATE:
+			std::system ( "clear" );
+
+			cout << " Pan rate value:    " << interactionMods[0]; 
+			
+			if(interactionMods[0] == 10) cout << " MAX" << endl;
+			else if(interactionMods[0] == 0.1) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << ">Rotate rate value: " << interactionMods[1];
+			
+			if(interactionMods[1] == 10) cout << " MAX" << endl;
+			else if(interactionMods[1] == 0.1) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Zoom rate value:   " << interactionMods[2];
+			
+			if(interactionMods[2] == 10) cout << " MAX" << endl;
+			else if(interactionMods[2] == 0.1) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Aviation Mode:     "; 
+			
+			if(r_yinvert == -1 && p_yinvert == -1) cout << "TRUE" << endl; else cout << "FALSE" << endl;
+				
+			cout << " Close" << endl;
 			break;
-		case 'Z':
-		case 'z':
-			z_mod = value;
-			printf("\nZoom rate modified.\n");
+		case ZOOM:
+			std::system ( "clear" );
+			cout << " Pan rate value:    " << interactionMods[0]; 
+			
+			if(interactionMods[0] == 10) cout << " MAX" << endl;
+			else if(interactionMods[0] == 0.1) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Rotate rate value: " << interactionMods[1];
+			
+			if(interactionMods[1] == 10) cout << " MAX" << endl;
+			else if(interactionMods[1] == 0.1) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << ">Zoom rate value:   " << interactionMods[2];
+			
+			if(interactionMods[2] == 10) cout << " MAX" << endl;
+			else if(interactionMods[2] == 0.1) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Aviation Mode:     "; 
+			
+			if(r_yinvert == -1 && p_yinvert == -1) cout << "TRUE" << endl; else cout << "FALSE" << endl;
+				
+			cout << " Close" << endl;
 			break;
-		case 'R':
-		case 'r':
-			printf("\nRotate rate modified.\n");
-			r_mod = value;
+		case AVIMODE:
+			std::system ( "clear" );
+			cout << " Pan rate value:    " << interactionMods[0]; 
+			
+			if(interactionMods[0] == 10) cout << " MAX" << endl;
+			else if(interactionMods[0] == 0.1) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Rotate rate value: " << interactionMods[1];
+			
+			if(interactionMods[1] == 10) cout << " MAX" << endl;
+			else if(interactionMods[1] == 0.1) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Zoom rate value:   " << interactionMods[2];
+			
+			if(interactionMods[2] == 10) cout << " MAX" << endl;
+			else if(interactionMods[2] == 0.1) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << ">Aviation Mode:     "; 
+			
+			if(r_yinvert == -1 && p_yinvert == -1) cout << "TRUE" << endl; else cout << "FALSE" << endl;
+				
+			cout << " Close" << endl;
 			break;
-		case 'S':
-		case 's':
-			s_mod = value;
-			printf("\nSpin rate modified.\n");
-			break;
-		case 'C':
-		case 'c':
-			printf("\nCancelled.\n");
+		case NONE:
+			std::system ( "clear" );
 			break;
 		default:
-			printf("\nERROR: Invalid input.\n");
+			cout << "ERROR: Default case hit, InteractionRatesMenu" << endl;
+			exit(1);
 			break;
-			
 	}
 }
 
@@ -555,13 +691,13 @@ void WiiAction::PrintInstructions(CWiimote &wm)
 	printf("NUNCHUK COMMANDS:\n");
 	printf("	Joystick w/ no buttons pressed  -  Pan\n");
 	printf("	Joystick w/ 'C' button pressed  -  Rotate\n");
-	printf("	Joystick w/ 'Z' button pressed  -  Dolly(default)/Zoom\n");
-	printf("	Joystick w/ 'C' & 'Z'  pressed  -  Roll\n");
+	printf("	Joystick w/ 'Z' button pressed  -  Zoom\n");
+	printf("	Joystick w/ 'C' & 'Z'  pressed  -  Roll (Not Implemented Yet)\n");
 	printf("\nWIIMOTE COMMANDS:\n");
-	printf("	D-pad Up     -  Modifier Prompt\n");
-	printf("	D-pad Down   -  Invert Prompt\n");
-	printf("	D-pad Left   -  Set Render Rate and Joystick Deadzone\n");
-	printf("	D-pad Right  -  Toggle Dolly/Zoom mode\n");
+	printf("	D-pad Up     -  Go up Interactor-Modifier menu\n");
+	printf("	D-pad Down   -  Go down Interactor-Modifier menu\n");
+	printf("	D-pad Left   -  Increase selected modifier value\n");
+	printf("	D-pad Right  -  Decrease selected modifier value\n");
 	printf("	A Button     -  Re-print Instructions\n");
 	printf("-----------------------------------------------------------------\n\n");
 }
