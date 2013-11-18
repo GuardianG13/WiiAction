@@ -20,10 +20,15 @@ WiiAction::WiiAction()
 	interactionMods[0] = 1;
 	interactionMods[1] = 1;
 	interactionMods[2] = 1;
+	interactionMods[3] = 1;
 	selectedMod = NONE;
 	deadzone = 0.12;
 	
-	haltSendData = false;
+	haltActive = true;
+	sending = false;
+	temp = true;
+	
+	MaxSize = 1;
 	
 	this->Center[1] = 0.0;
 	this->Center[2] = 0.0;
@@ -43,19 +48,24 @@ WiiAction::~WiiAction()
 void* WiiAction::SendData()
 {
 	int command = 4;
-	if(receiveReadyCommand(s) && !haltSendData)
+	if(receiveReadyCommand(s))
 	{
 		if(-1 == send(s, &command, sizeof(command), 0))
 		{
 			printf("Command Send Fail. \n");
 			exit(1);
 		}
+		else
+			cout << "Command Sent" << endl;
 		if(-1 == send(s, &camState->camera, sizeof(CameraState), 0))
 		{
 			printf("Data Send Fail. \n");
 			exit(1);
 		}
+		else
+			cout << "Data Sent" << endl;
 	}
+	sending = false;
 	pthread_exit(NULL);
 }
 
@@ -87,8 +97,7 @@ void WiiAction::SocketConnect()
 	else
 		printf("Connection successful. \n");
 	
-	GetData(s);
-	
+	Create_pThread(Get);
 }
 
 void WiiAction::FindWiimote()
@@ -196,7 +205,8 @@ void WiiAction::Pan(CNunchuk &nc)
 		float x = sin(angle*PI/180);
 		float y = cos(angle*PI/180);
 		magnitude += .1 - deadzone;
-		float multiplier = interactionMods[0]*mod*exp(magnitude)*pow(magnitude+.56,6.5);
+		float scale = ScaleModifier();
+		float multiplier = interactionMods[0]*mod*exp(magnitude)*pow(magnitude+.56,6.5)*(magnitude/10*pow(scale,.66));
 		float dx = p_xinvert*multiplier*x;
 		float dy = -p_yinvert*multiplier*y;
 		this->Pan(dx,dy);
@@ -224,8 +234,9 @@ void WiiAction::Zoom(CNunchuk &nc)
 	{
 		float y = cos(angle*PI/180);
 		magnitude += .1 - deadzone;
-		float multiplier = .1*mod*exp(magnitude)*pow(magnitude+.5,5);
-		float dy = interactionMods[2]*z_invert*multiplier*y;
+		float scale = ScaleModifier();
+		float multiplier = .1*mod*exp(magnitude)*pow(magnitude+.5,5)*(pow(scale,.9)/100);
+		float dy = interactionMods[3]*z_invert*multiplier*y;
 		this->Zoom(dy);
 	}
 }
@@ -252,168 +263,204 @@ void WiiAction::Roll(CNunchuk &nc)
 	{
 		float x = sin(angle*PI/180);
 		magnitude += .1 - deadzone;
-		float multiplier = s_mod*mod*exp(magnitude)*pow(magnitude+.5,5);
-		stringstream ss;
-		ss.str(std::string());
-		ss << "pvroll(" << -s_invert*.5*multiplier*x << ");";
-		const std::string temp = ss.str();
-		const char* cstr = temp.c_str();
-		write(s, cstr, strlen(cstr));
+		float multiplier = interactionMods[2]*mod*.5*exp(magnitude)*pow(magnitude+.5,5);
+		float dx = s_invert*multiplier*x;
+		this->Roll(dx);
 	}
 }
 
-void WiiAction::Create_pThread()
+void WiiAction::Create_pThread(pThread_arg data)
 {
-	int rc = pthread_create(&thread, NULL, &WiiAction::SendHelper, this);
-	if (rc)
+	if(data == Send && !sending)
 	{
-		cout << "Error: unable to create thread," << rc << endl;
-		exit(-1);
+		sending = true;
+		int rc = pthread_create(&thread, NULL, &WiiAction::SendDataHelper, this);
+		if (rc)
+		{
+			cout << "Error: unable to create thread," << rc << endl;
+			exit(-1);
+		}
+	}
+	else if(data == Get)
+	{
+		pthread_join(thread, NULL);
+		int rc = pthread_create(&thread, NULL, &WiiAction::GetDataHelper, this);
+		if (rc)
+		{
+			cout << "Error: unable to create thread," << rc << endl;
+			exit(-1);
+		}
 	}
 }
 
 void WiiAction::HandleEvent(CWiimote &wm)
 {
     int exType = wm.ExpansionDevice.GetType();
-    if(exType == wm.ExpansionDevice.TYPE_NUNCHUK)
+    if(haltActive)
     {
-    	float angle, magnitude;
-    	CNunchuk &nc = wm.ExpansionDevice.Nunchuk;
-    	if(!nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z) && !nc.Buttons.isHeld(CNunchukButtons::BUTTON_C))
-		{
-			Pan(nc);
-		}
-    	if(nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z) && !nc.Buttons.isHeld(CNunchukButtons::BUTTON_C))
+        if(wm.Buttons.isJustPressed(CButtons::BUTTON_B))
     	{
-    		if(toggle)
-    			Dolly(nc);
-    		else
-    			Zoom(nc);
-    		return;
-    	}
-    	if(nc.Buttons.isHeld(CNunchukButtons::BUTTON_C) && !nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z))
-    	{
-    		Rotate(nc);
-    		return;
-    	}
-    	if(nc.Buttons.isHeld(CNunchukButtons::BUTTON_C) && nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z))
-    	{
-    		//Roll(nc);
-    		return;
+        	Create_pThread(Get);	
+        	cout << "Unpaused" << endl;
+        	return;
     	}
     }
-    if(wm.Buttons.isJustPressed(CButtons::BUTTON_A))
+    else
     {
-    	PrintInstructions(wm);
+		if(exType == wm.ExpansionDevice.TYPE_NUNCHUK)
+		{
+			float angle, magnitude;
+			CNunchuk &nc = wm.ExpansionDevice.Nunchuk;
+			if(!nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z) && !nc.Buttons.isHeld(CNunchukButtons::BUTTON_C))
+			{
+				Pan(nc);
+			}
+			if(nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z) && !nc.Buttons.isHeld(CNunchukButtons::BUTTON_C))
+			{
+				if(toggle)
+					Dolly(nc);
+				else
+					Zoom(nc);
+				return;
+			}
+			if(nc.Buttons.isHeld(CNunchukButtons::BUTTON_C) && !nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z))
+			{
+				Rotate(nc);
+				return;
+			}
+			if(nc.Buttons.isHeld(CNunchukButtons::BUTTON_C) && nc.Buttons.isHeld(CNunchukButtons::BUTTON_Z))
+			{
+				Roll(nc);
+				return;
+			}
+		}
+		if(wm.Buttons.isJustPressed(CButtons::BUTTON_A))
+		{
+			PrintInstructions(wm);
+		}
+		if(wm.Buttons.isJustPressed(CButtons::BUTTON_MINUS))
+		{
+			if(temp)
+			{
+				mod = mod/4;
+				temp = false;
+			}
+		}
+		if(wm.Buttons.isJustPressed(CButtons::BUTTON_PLUS))
+		{
+			if(!temp)
+			{
+				mod = mod*4;
+				temp = true;
+			}
+		}
+		if(wm.Buttons.isJustPressed(CButtons::BUTTON_B))
+		{
+			pthread_join(thread, NULL);
+			haltActive = true;
+			cout << "Paused" << endl;
+			return;
+		}
+		if(wm.Buttons.isJustPressed(CButtons::BUTTON_DOWN)) 
+		{
+			switch(selectedMod)
+			{
+			case PAN:
+				selectedMod = ROTATE;
+				break;
+			case ROTATE:
+				selectedMod = ROLL;
+				break;
+			case ROLL:
+				selectedMod = ZOOM;
+				break;
+			case ZOOM:
+				selectedMod = AVIMODE;
+				break;
+			case AVIMODE:
+				selectedMod = NONE;
+				break;
+			case NONE:
+				selectedMod = PAN;
+				break;
+			default:
+				cout << "ERROR: Default case hit, Down" << endl;
+				exit(1);
+				break;
+			}
+			InteractionRatesMenu(); // SetInvertion(); Needs alternate button suggest (+)/(-)
+		}
+		if(wm.Buttons.isJustPressed(CButtons::BUTTON_RIGHT) && (selectedMod != NONE))
+		{
+			unsigned int x = selectedMod;
+			if(x == 3)
+			{
+				r_yinvert *= -1;
+				p_yinvert *= -1;
+			}
+			else if(interactionMods[x] < 1)
+			{
+				interactionMods[x] += 0.1;
+			}
+			else if(interactionMods[x] < 10)
+			{
+				interactionMods[x] += 1.0;
+			}
+			InteractionRatesMenu();
+		}
+		if(wm.Buttons.isJustPressed(CButtons::BUTTON_LEFT) && (selectedMod != NONE)) 
+		{
+			unsigned int x = selectedMod;
+			if(x == 4)
+			{
+				r_yinvert *= -1;
+				p_yinvert *= -1;
+			}
+			else if(interactionMods[x] < 0.2) //Weird bug causes interactionMods[x] = 0.2 -= 0.1 => 0.099999... 
+										 //this is a dirty fix
+			{
+				interactionMods[x] = 0.1;
+			}
+			else if(interactionMods[x] <= 1)
+			{
+				interactionMods[x] -= 0.1;
+			}
+			else
+			{
+				interactionMods[x] -= 1.0;
+			}
+			InteractionRatesMenu();
+		}
+		if(wm.Buttons.isJustPressed(CButtons::BUTTON_UP))
+		{
+			switch(selectedMod)
+			{
+			case PAN:
+				selectedMod = NONE;
+				break;
+			case ROTATE:
+				selectedMod = PAN;
+				break;
+			case ROLL:
+				selectedMod = ROTATE;
+				break;
+			case ZOOM:
+				selectedMod = ROLL;
+				break;
+			case AVIMODE:
+				selectedMod = ZOOM;
+				break;
+			case NONE:
+				selectedMod = AVIMODE;
+				break;
+			default:
+				cout << "ERROR: Default case hit, Up" << endl;
+				exit(1);
+				break;
+			}
+			InteractionRatesMenu();
+		}
     }
-    if(wm.Buttons.isJustPressed(CButtons::BUTTON_B))
-	{
-    	//Purpose of doing this is to allow the user a way to change the render camera
-    	//without having to fight the wiimote. When reactivated, wiimote pulls new 
-    	//camera data.
-		if(!haltSendData)
-		{
-			//haltSendData = true; //Dont halt yet. Issue with receiving new data from socket.
-		}
-		else
-		{
-			GetData(s);
-			haltSendData = false;
-		}
-	}
-    if(wm.Buttons.isJustPressed(CButtons::BUTTON_DOWN)) 
-	{
-		switch(selectedMod)
-		{
-		case PAN:
-			selectedMod = ROTATE;
-			break;
-		case ROTATE:
-			selectedMod = ZOOM;
-			break;
-		case ZOOM:
-			selectedMod = AVIMODE;
-			break;
-		case AVIMODE:
-			selectedMod = NONE;
-			break;
-		case NONE:
-			selectedMod = PAN;
-			break;
-		default:
-			cout << "ERROR: Default case hit, Down" << endl;
-			exit(1);
-			break;
-		}
-		InteractionRatesMenu(); // SetInvertion(); Needs alternate button suggest (+)/(-)
-	}
-    if(wm.Buttons.isJustPressed(CButtons::BUTTON_RIGHT) && (selectedMod != NONE))
-    {
-    	unsigned int x = selectedMod;
-    	if(x == 3)
-    	{
-    		r_yinvert *= -1;
-    		p_yinvert *= -1;
-    	}
-    	else if(interactionMods[x] < 1)
-    	{
-    		interactionMods[x] += 0.1;
-    	}
-    	else if(interactionMods[x] < 10)
-    	{
-    		interactionMods[x] += 1.0;
-    	}
-    	InteractionRatesMenu();
-    }
-	if(wm.Buttons.isJustPressed(CButtons::BUTTON_LEFT) && (selectedMod != NONE)) 
-	{
-    	unsigned int x = selectedMod;
-    	if(x == 3)
-    	{
-    		r_yinvert *= -1;
-    		p_yinvert *= -1;
-    	}
-    	else if(interactionMods[x] < 0.2) //Weird bug causes interactionMods[x] = 0.2 -= 0.1 => 0.099999... 
-    								 //this is a dirty fix
-    	{
-    		interactionMods[x] = 0.1;
-    	}
-    	else if(interactionMods[x] <= 1)
-    	{
-    		interactionMods[x] -= 0.1;
-    	}
-    	else
-    	{
-    		interactionMods[x] -= 1.0;
-    	}
-    	InteractionRatesMenu();
-	}
-	if(wm.Buttons.isJustPressed(CButtons::BUTTON_UP))
-	{
-		switch(selectedMod)
-		{
-		case PAN:
-			selectedMod = NONE;
-			break;
-		case ROTATE:
-			selectedMod = PAN;
-			break;
-		case ZOOM:
-			selectedMod = ROTATE;
-			break;
-		case AVIMODE:
-			selectedMod = ZOOM;
-			break;
-		case NONE:
-			selectedMod = AVIMODE;
-			break;
-		default:
-			cout << "ERROR: Default case hit, Up" << endl;
-			exit(1);
-			break;
-		}
-		InteractionRatesMenu();
-	}
 }
 
 void WiiAction::SetInvertion()
@@ -556,10 +603,16 @@ void WiiAction::InteractionRatesMenu()
 			else if(interactionMods[1] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
-			cout << " Zoom rate value:   " << interactionMods[2];
-			
+			cout << " Roll rate value:   " << interactionMods[2];
+						
 			if(interactionMods[2] == 10) cout << " MAX" << endl;
 			else if(interactionMods[2] < 0.15) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Zoom rate value:   " << interactionMods[3];
+			
+			if(interactionMods[3] == 10) cout << " MAX" << endl;
+			else if(interactionMods[3] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << " Aviation Mode:     "; 
@@ -583,10 +636,48 @@ void WiiAction::InteractionRatesMenu()
 			else if(interactionMods[1] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
-			cout << " Zoom rate value:   " << interactionMods[2];
-			
+			cout << " Roll rate value:   " << interactionMods[2];
+						
 			if(interactionMods[2] == 10) cout << " MAX" << endl;
 			else if(interactionMods[2] < 0.15) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Zoom rate value:   " << interactionMods[3];
+			
+			if(interactionMods[3] == 10) cout << " MAX" << endl;
+			else if(interactionMods[3] < 0.15) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Aviation Mode:     "; 
+			
+			if(r_yinvert == -1 && p_yinvert == -1) cout << "TRUE" << endl; else cout << "FALSE" << endl;
+				
+			cout << " Close" << endl;
+			break;
+		case ROLL:
+			std::system ( "clear" );
+			cout << " Pan rate value:    " << interactionMods[0]; 
+			
+			if(interactionMods[0] == 10) cout << " MAX" << endl;
+			else if(interactionMods[0] < 0.15) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Rotate rate value: " << interactionMods[1];
+			
+			if(interactionMods[1] == 10) cout << " MAX" << endl;
+			else if(interactionMods[1] < 0.15) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << ">Roll rate value:   " << interactionMods[2];
+						
+			if(interactionMods[2] == 10) cout << " MAX" << endl;
+			else if(interactionMods[2] < 0.15) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Zoom rate value:   " << interactionMods[3];
+			
+			if(interactionMods[3] == 10) cout << " MAX" << endl;
+			else if(interactionMods[3] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << " Aviation Mode:     "; 
@@ -609,10 +700,16 @@ void WiiAction::InteractionRatesMenu()
 			else if(interactionMods[1] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
-			cout << ">Zoom rate value:   " << interactionMods[2];
-			
+			cout << " Roll rate value:   " << interactionMods[2];
+						
 			if(interactionMods[2] == 10) cout << " MAX" << endl;
 			else if(interactionMods[2] < 0.15) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << ">Zoom rate value:   " << interactionMods[3];
+			
+			if(interactionMods[3] == 10) cout << " MAX" << endl;
+			else if(interactionMods[3] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << " Aviation Mode:     "; 
@@ -634,11 +731,17 @@ void WiiAction::InteractionRatesMenu()
 			if(interactionMods[1] == 10) cout << " MAX" << endl;
 			else if(interactionMods[1] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
-			
-			cout << " Zoom rate value:   " << interactionMods[2];
-			
+
+			cout << " Roll rate value:   " << interactionMods[2];
+						
 			if(interactionMods[2] == 10) cout << " MAX" << endl;
 			else if(interactionMods[2] < 0.15) cout << " MIN" << endl;
+			else cout << endl;
+			
+			cout << " Zoom rate value:   " << interactionMods[3];
+			
+			if(interactionMods[3] == 10) cout << " MAX" << endl;
+			else if(interactionMods[3] < 0.15) cout << " MIN" << endl;
 			else cout << endl;
 			
 			cout << ">Aviation Mode:     "; 
@@ -692,7 +795,7 @@ void WiiAction::PrintInstructions(CWiimote &wm)
 	printf("	Joystick w/ no buttons pressed  -  Pan\n");
 	printf("	Joystick w/ 'C' button pressed  -  Rotate\n");
 	printf("	Joystick w/ 'Z' button pressed  -  Zoom\n");
-	printf("	Joystick w/ 'C' & 'Z'  pressed  -  Roll (Not Implemented Yet)\n");
+	printf("	Joystick w/ 'C' & 'Z'  pressed  -  Roll\n");
 	printf("\nWIIMOTE COMMANDS:\n");
 	printf("	D-pad Up     -  Go up Interactor-Modifier menu\n");
 	printf("	D-pad Down   -  Go down Interactor-Modifier menu\n");
@@ -720,7 +823,7 @@ void WiiAction::Dolly(float dy)
 	pos[1] = pos[1]-Ld[1]*dy*0.2;
 	pos[2] = pos[2]-Ld[2]*dy*0.2;
 	
-	Create_pThread();
+	Create_pThread(Send);
 }
 
 void WiiAction::Zoom(float dy)
@@ -749,7 +852,7 @@ void WiiAction::Zoom(float dy)
 	camState->SetFocalPoint(fp[0], fp[1], fp[2]);
 	camState->SetPosition(pos[0], pos[1], pos[2]);
 	
-	Create_pThread();
+	Create_pThread(Send);
 }
 
 void WiiAction::Pan(float dx, float dy)
@@ -786,7 +889,39 @@ void WiiAction::Pan(float dx, float dy)
 	camState->SetPosition(pos[0], pos[1], pos[2]);
 	camState->SetFocalPoint(fp[0], fp[1], fp[2]);
 	
-	Create_pThread();
+	Create_pThread(Send);
+}
+
+void WiiAction::Roll(float dx)
+{
+
+	if(camState == NULL)
+			return;
+		
+	WiiTransform *transform = new WiiTransform();
+	
+	float axis[3];
+	
+	float* fp = camState->GetFocalPoint();
+	float* pos = camState->GetPosition();
+	axis[0] = fp[0] - pos[0];
+	axis[1] = fp[1] - pos[1];
+	axis[2] = fp[2] - pos[2];
+
+	// translate to center
+	transform->Identity();
+	transform->Translate(this->Center[0], this->Center[1], this->Center[2]);
+
+	transform->RotateWXYZ(-360.0*dx, axis[0], axis[1], axis[2]);
+
+	// translate back
+	transform->Translate(-this->Center[0], -this->Center[1], -this->Center[2]);
+	camState->ApplyTransform(transform);
+	camState->OrthogonalizeViewUp();
+	
+	Create_pThread(Send);
+	
+	transform->Delete();
 }
 
 void WiiAction::Rotate(float dx, float dy)
@@ -835,7 +970,7 @@ void WiiAction::Rotate(float dx, float dy)
 	temp = camState->GetPosition();
 	camState->SetPosition(temp[0]*scale, temp[1]*scale, temp[2]*scale);
 	
-	Create_pThread();
+	Create_pThread(Send);
 	
 	transform->Delete();
 }
@@ -871,41 +1006,41 @@ bool WiiAction::receiveReadyCommand(int socket)
 		return false;
 }
 
-void WiiAction::GetData(const int socket)
+void* WiiAction::GetData()
 {
 	int ready = 0;
 	int command = 2;
 	int size;
 	float cam[10];
-	
+
 	while(ready != 1)
 	{
-		if((size = Receive(s, &ready, sizeof(ready))) != 4)
+		if((size = Receive(this->s, &ready, sizeof(ready))) != 4)
 			printf("Size not 4 bytes. Continue anyways.\n");
 	}
-	
-	if(-1 == send(s, &command, sizeof(command), 0))
+
+	if(-1 == send(this->s, &command, sizeof(command), 0))
 	{
 		printf("Command Send Fail. \n");
 		exit(1);
 	}
-	
+
 	unsigned long long length;
-	if(!Receive(s, &length, sizeof(unsigned long long)))
+	if(!Receive(this->s, &length, sizeof(unsigned long long)))
 	{
 		printf("Receive Failure\n");
 	}
-	
-	char metadata[length];
-	
-	if(!Receive(s, &metadata, length))
+
+	char metadata[length+1];
+
+	if(!Receive(this->s, &metadata, length))
 	{
 		printf("MetaData not received.\n");
 	}
+
+	metadata[length] = '\0';
 	
 	json_object * jobj = json_tokener_parse((char*)metadata);
-	
-	json_get_array_values(jobj, "Center", this->Center);
 		
 	json_get_array_values(jobj, "Renderers", cam);
 	
@@ -913,6 +1048,10 @@ void WiiAction::GetData(const int socket)
 	this->camState->SetFocalPoint(cam[1], cam[2], cam[3]);
 	this->camState->SetViewUp(cam[4], cam[5], cam[6]);
 	this->camState->SetPosition(cam[7], cam[8], cam[9]);
+	this->camState->GetFocalPoint(this->Center);
+
+	haltActive = false;
+	pthread_exit(NULL);
 }
 
 
@@ -1019,7 +1158,16 @@ void WiiAction::print_json_value(json_object *jobj){
   }
 }
 
-
+float WiiAction::ScaleModifier()
+{
+	float distance = camState->GetDistance(this->Center[0],this->Center[1],this->Center[2]);
+	if(distance < MaxSize/2)
+		return 0.5;
+	else if(distance > 100000)
+		return 100000;
+	else
+		return distance;
+}
 
 
 

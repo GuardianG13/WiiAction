@@ -248,3 +248,20 @@ void WiiCamera::ComputeDistance()
 	
 	this->ComputeViewPlaneNormal();
 }
+
+float WiiCamera::GetDistance(float x, float y, float z)
+{
+	float distance;
+	float dx = x - this->camera.Position[0];
+	float dy = y - this->camera.Position[1];
+	float dz = z - this->camera.Position[2];
+	
+	distance = sqrt(dx*dx + dy*dy + dz*dz);
+	
+	if (distance < 1e-20)
+	{
+		distance = 1e-20;		
+	}
+	
+	return distance;
+}

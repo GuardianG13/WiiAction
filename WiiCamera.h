@@ -27,6 +27,7 @@ public:
 	void ApplyTransform(WiiTransform *t);
 	void ComputeViewTransform();
 	void ComputeDistance();
+	
 	void ComputeViewPlaneNormal();
 	CameraState GetCamState();
 	void SetCamState(const CameraState cam);
@@ -46,6 +47,8 @@ public:
 	float GetParallelScale() { return ParallelScale; };
 	void SetParallelScale(float scale);
 	void Delete(){ delete this; }
+	
+	float GetDistance(float x, float y, float z);
 	
 	CameraState camera;
 	

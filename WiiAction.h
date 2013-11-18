@@ -32,8 +32,8 @@
 
 using namespace std;
 
-enum interaction_t { PAN = 0, ROTATE, ZOOM, AVIMODE, NONE };
-
+enum interaction_t { PAN = 0, ROTATE, ROLL, ZOOM, AVIMODE, NONE };
+enum pThread_arg { Send = 0, Get = 1 };
 
 int LED_MAP[4] = {CWiimote::LED_1, CWiimote::LED_2, CWiimote::LED_3, CWiimote::LED_4};
 
@@ -61,27 +61,31 @@ public:
 	void HandleDisconnect(CWiimote& wm);
 	void HandleReadData(CWiimote& wm);
 	void HandleNunchukInserted(CWiimote& wm);
-	void Create_pThread();
+	void Create_pThread(pThread_arg data);
 	
 	//Socket fuctions
 	bool receiveReadyCommand(int socket);
     int  Receive(const int socket, void* data, int len);
-	void GetData(const int socket);
+	void* GetData();
 	void* SendData();
-	static void *SendHelper(void *arg) { return ((WiiAction *)arg)->SendData(); }
+	static void *SendDataHelper(void *arg) { return ((WiiAction *)arg)->SendData(); }
+	static void *GetDataHelper(void *arg) { return ((WiiAction *)arg)->GetData(); }
 	
 	//Manipulation Functions
 	void Rotate(float dx, float dy);
 	void Pan(float dx, float dy);
-	void Roll(float dx, float dy);
+	void Roll(float dx);
 	void Zoom(float dy);
-	void Dolly(float dy);		
+	void Dolly(float dy);
 	
 	//JSON Functions
 	void json_get_array_values(json_object *jobj, char *key, float a[]);
 	void json_parse(json_object * jobj);
 	void json_parse_array( json_object *jobj, char *key);
 	void print_json_value(json_object *jobj);
+	
+	// MISC
+	float ScaleModifier();
 	
 private:
 	/// Wii Dependents ///
@@ -97,6 +101,7 @@ private:
 	int s;
 	sockaddr_in svr;
 	pthread_t thread;
+	bool sending;
 	
 	/// Interaction Dependents ///
 	bool trigger;		//Janky way of preventing the instructions from printing twice upon activation.
@@ -117,19 +122,21 @@ private:
 					// For all Modifiers: Values must be positive. 
 					// Value > 1: Magnifies rate; 1 > Value > 0: Miniturizes Rate.
 	interaction_t selectedMod;
-	float interactionMods[3]; //Contains modifiers for  Pan, Rotate, and Zoom, respectively.
-							   //Dolly and Spin not included yet.
+	float interactionMods[4]; //Contains modifiers for  Pan, Rotate, Roll, and Zoom, respectively.
+							   //Dolly not included yet.
 	float d_mod;		//Modifier that changes the rate of the Dolly function.
 	float z_mod;		//Modifier that changes the rate of the Zoom function.
 	float s_mod;		//Modifier that changes the rate of the Spin function.
 	
 	float deadzone;		//Modifies the dead zone of the joystick. Value must be between 0.05 & 1.1.
+	bool temp;
 	
 	///Manipulation Dependents ///
 	WiiCamera *camState;
 	float cam_angle;
 	float Center[3];
-	bool haltSendData;
+	bool haltActive;
+	float MaxSize;
 	
 };
 
