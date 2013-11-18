@@ -55,15 +55,11 @@ void* WiiAction::SendData()
 			printf("Command Send Fail. \n");
 			exit(1);
 		}
-		else
-			cout << "Command Sent" << endl;
 		if(-1 == send(s, &camState->camera, sizeof(CameraState), 0))
 		{
 			printf("Data Send Fail. \n");
 			exit(1);
 		}
-		else
-			cout << "Data Sent" << endl;
 	}
 	sending = false;
 	pthread_exit(NULL);
